@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'EMDR Video Chat',
-  description: 'EMDR therapy over video chat',
+  description: 'EMDR therapy video chat client',
 };
 
 export default function RootLayout({

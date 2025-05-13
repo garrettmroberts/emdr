@@ -17,6 +17,7 @@ export default function Home() {
     remoteVideoRef,
     localStream,
     remoteStream,
+    sendMessageToPeer
   } = usePeer();
 
   return (
@@ -96,6 +97,9 @@ export default function Home() {
         distance={400}
         color="#FF5733"
       />
+      <button onClick={() => sendMessageToPeer("Hello from client!")}>
+        Send Message
+      </button>
     </div>
   );
 }
