@@ -1,8 +1,9 @@
 "use client";
 
 import styles from "./page.module.css";
-import Peer from "peerjs";
+import Peer, { MediaConnection } from "peerjs";
 import { useEffect, useState, useRef } from "react";
+import VisualElement from "./components/VisualElement";
 
 export default function Home() {
   const [peerId, setPeerId] = useState<string | null>(null);
@@ -14,8 +15,8 @@ export default function Home() {
   const [connectionStatus, setConnectionStatus] = useState<string>('Disconnected');
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const activeCalls = useRef<Map<string, any>>(new Map());
-  const pendingCalls = useRef<Array<any>>([]);
+  const activeCalls = useRef<Map<string, MediaConnection>>(new Map());
+  const pendingCalls = useRef<Array<MediaConnection>>([]);
 
   // Initialize peer ID
   useEffect(() => {
@@ -160,7 +161,7 @@ export default function Home() {
     setPeer(newPeer);
   }
 
-  const answerCall = (call: any) => {
+  const answerCall = (call: MediaConnection) => {
     if (!localStream) {
       console.error('Cannot answer call without local stream');
       return;
@@ -326,6 +327,12 @@ export default function Home() {
       <p className={styles.instructions}>
         <strong>Instructions:</strong> Share your ID with someone else. Enter their ID and press Connect.
       </p>
+      <VisualElement 
+        size={60}
+        speed={1.5}
+        distance={400}
+        color="#FF5733"
+      />
     </div>
   );
 }
