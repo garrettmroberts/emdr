@@ -18,6 +18,9 @@ interface PeerContextType {
   sendMessageToPeer: (message: string) => boolean;
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
   remoteVideoRef: React.RefObject<HTMLVideoElement | null>;
+  animationActive: boolean;
+  startAnimation: () => void;
+  stopAnimation: () => void;
 }
 
 const PeerContext = createContext<PeerContextType | null>(null);
@@ -38,7 +41,8 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isConnected, setIsConnected] = useState(false);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<string>('Disconnected');
-  
+  const [animationActive, setAnimationActive] = useState(false);
+
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const activeCalls = useRef<Map<string, MediaConnection>>(new Map());
@@ -138,6 +142,17 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const setupDataConnectionListeners = (conn: DataConnection) => {
     conn.on('data', (data) => {
       console.log('Received data:', data);
+      
+      // Handle animation control messages
+      if (typeof data === 'string') {
+        if (data.includes('start-animation')) {
+          console.log('Received animation start command');
+          setAnimationActive(true);
+        } else if (data.includes('stop-animation')) {
+          console.log('Received animation stop command');
+          setAnimationActive(false);
+        }
+      }
     });
     
     conn.on('close', () => {
@@ -340,6 +355,16 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const startAnimation = () => {
+    setAnimationActive(true);
+    sendMessageToPeer('start-animation');
+  };
+
+  const stopAnimation = () => {
+    setAnimationActive(false);
+    sendMessageToPeer('stop-animation');
+  };
+
   const value = {
     peerId,
     peer,
@@ -355,6 +380,9 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     sendMessageToPeer,
     localVideoRef,
     remoteVideoRef,
+    animationActive,
+    startAnimation,
+    stopAnimation,
   };
 
   return (

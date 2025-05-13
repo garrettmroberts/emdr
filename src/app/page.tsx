@@ -17,7 +17,9 @@ export default function Home() {
     remoteVideoRef,
     localStream,
     remoteStream,
-    sendMessageToPeer
+    sendMessageToPeer,
+    startAnimation,
+    stopAnimation
   } = usePeer();
 
   return (
@@ -91,15 +93,14 @@ export default function Home() {
       <p className={styles.instructions}>
         <strong>Instructions:</strong> Share your ID with someone else. Enter their ID and press Connect.
       </p>
+      
       <VisualElement 
         size={60}
         speed={1.5}
         distance={400}
         color="#FF5733"
+        peerControlled={true}
       />
-      <button onClick={() => sendMessageToPeer("Hello from client!")}>
-        Send Message
-      </button>
     </div>
   );
 }
