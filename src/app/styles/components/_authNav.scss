@@ -1,0 +1,136 @@
+@import '../utils/variables';
+
+.authContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    padding: 20px;
+  }
+  
+  .authForm {
+    width: 100%;
+    max-width: 400px;
+    padding: 30px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  
+    h1 {
+      margin-bottom: 20px;
+      text-align: center;
+      color: #333;
+    }
+  }
+  
+  .formGroup {
+    margin-bottom: 20px;
+  
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #555;
+    }
+  
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+  }
+  
+  .submitButton {
+    width: 100%;
+    padding: 12px;
+    background-color: $color-primary;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  
+    &:hover {
+      background-color: $color-secondary;
+    }
+  
+    &:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+  }
+  
+  .error {
+    padding: 10px;
+    margin-bottom: 20px;
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+  }
+  
+  .switchMode {
+    margin-top: 20px;
+    text-align: center;
+  
+    button {
+      background: none;
+      border: none;
+      color: $color-primary;
+      cursor: pointer;
+      font-weight: bold;
+  
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+  
+  // Add the missing styles for AuthNav component
+  .authNav {
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .userInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .userRole {
+    font-weight: bold;
+    margin-right: 5px;
+  }
+  
+  .userName {
+    margin-right: 10px;
+  }
+  
+  .profileLink {
+    margin-right: 10px;
+    color: $color-primary;
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  
+  .authButton {
+    background-color: $color-primary;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 14px;
+    
+    &:hover {
+      background-color: $color-secondary;
+    }
+  }

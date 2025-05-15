@@ -2,27 +2,26 @@
 
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
-import styles from './AuthNav.module.css';
 
 export default function AuthNav() {
   const { user, userRole, signOut } = useAuth();
   
   return (
-    <div className={styles.authNav}>
+    <div className="authNav">
       {user ? (
-        <div className={styles.userInfo}>
-          <span className={styles.userRole}>
+        <div className="userInfo">
+          <span className="userRole">
             {userRole === 'therapist' ? 'Therapist' : 'Client'}
           </span>
-          <span className={styles.userName}>
+          <span className="userName">
             {user.email}
           </span>
-          <Link href="/profile" className={styles.profileLink}>
+          <Link href="/profile" className="profileLink">
             Profile
           </Link>
           <button 
             onClick={signOut} 
-            className={styles.authButton}
+            className="authButton"
           >
             Logout
           </button>
@@ -30,7 +29,7 @@ export default function AuthNav() {
       ) : (
         <Link 
           href="/auth" 
-          className={styles.authButton}
+          className="authButton"
         >
           Login
         </Link>

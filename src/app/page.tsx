@@ -4,10 +4,11 @@ import { usePeer } from "./context/PeerContext";
 import VisualElement from "./components/VisualElement";
 import { useAuth } from "./context/AuthContext";
 import { useEffect, useState } from "react";
-import { FaCopy, FaPlay, FaStop, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaShieldAlt, FaLaptopMedical, FaBrain, FaRegCommentDots } from 'react-icons/fa';
+import { FaCopy, FaPlay, FaStop, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaShieldAlt, FaLaptopMedical, FaBrain, FaRegCommentDots, FaPhone, FaTimes } from 'react-icons/fa';
 import Loader from "./components/Loader";
 import Image from 'next/image';
 import Header from "./components/Header";
+import MediaControlBar from "./components/MediaControlBar";
 
 export default function Home() {
   const { user, userRole, isLoading } = useAuth();
@@ -24,13 +25,14 @@ export default function Home() {
     localStream,
     remoteStream,
     sendMessageToPeer,
-    remoteVideoEnabled, // Add this line
+    remoteVideoEnabled,
   } = usePeer();
   
   const [copySuccess, setCopySuccess] = useState(false);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [videoTrackBackup, setVideoTrackBackup] = useState<MediaStreamTrack | null>(null);
+  const [visualActive, setVisualActive] = useState(false);
+  const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
   
   // Reset copy success message after 2 seconds
   useEffect(() => {
@@ -52,11 +54,9 @@ export default function Home() {
       const videoTracks = localStream.getVideoTracks();
       
       videoTracks.forEach(track => {
-        // Simply toggle the enabled property
         track.enabled = !videoEnabled;
       });
       
-      // Notify the peer about the video state
       sendMessageToPeer(videoEnabled ? 'video-disabled' : 'video-enabled');
       
       setVideoEnabled(!videoEnabled);
@@ -74,6 +74,20 @@ export default function Home() {
       
       setAudioEnabled(!audioEnabled);
     }
+  };
+
+  // Function to toggle visual element
+  const toggleVisual = () => {
+    setVisualActive(!visualActive);
+    sendMessageToPeer(!visualActive ? 'start-visual' : 'stop-visual');
+  };
+
+  const openControlPanel = () => {
+    setIsControlPanelOpen(true);
+  };
+  
+  const closeControlPanel = () => {
+    setIsControlPanelOpen(false);
   };
 
   if (isLoading) {
@@ -114,7 +128,6 @@ export default function Home() {
                   width={500} 
                   height={300} 
                   onError={(e) => {
-                    // Fallback if image doesn't exist
                     const target = e.currentTarget as HTMLImageElement;
                     target.style.display = 'none';
                     if (target.parentElement) {
@@ -206,7 +219,6 @@ export default function Home() {
               </div>
             )}
             
-            {/* Add this new overlay for when remote video is disabled */}
             {remoteStream && !remoteVideoEnabled && (
               <div className="remoteVideoDisabledOverlay">
                 <FaVideoSlash size={50} />
@@ -233,90 +245,103 @@ export default function Home() {
             {/* EMDR Visual overlay */}
             <div className="visualOverlay">
               <VisualElement 
-                size={60}
-                speed={1.5}
-                distance={400}
-                color="#1DCD9F"
-                peerControlled={true}
+                isActive={visualActive}
+                peerControlled={userRole !== 'therapist'} 
               />
             </div>
           </div>
           
-          {/* Controls panel */}
-          <div className="controlsPanel">
-            <div className="statusBar">
-              <div className="connectionStatus">
-                <span className={`statusDot ${connectionStatus.includes('Connected') ? 'connected' : ''}`}></span>
-                <p>{connectionStatus}</p>
-              </div>
-              
-              <div className="peerIdContainer">
-                <div className="peerIdDisplay">
-                  <span>Your ID:</span>
-                  <code>{peerId}</code>
+          {/* Call button (only visible for therapists) */}
+          {userRole === 'therapist' && (
+            <button 
+              onClick={remoteStream ? disconnectCall : openControlPanel}
+              className={`callButton ${remoteStream ? 'active' : ''}`}
+            >
+              {remoteStream ? <FaStop /> : <FaPhone />}
+            </button>
+          )}
+
+          {/* Control Panel Modal */}
+          {isControlPanelOpen && (
+            <div className="modalOverlay">
+              <div className="controlPanelModal">
+                <div className="modalHeader">
+                  <h3>Start a Session</h3>
+                  <button onClick={closeControlPanel} className="closeButton">
+                    <FaTimes />
+                  </button>
                 </div>
-                <button 
-                  onClick={handleCopy} 
-                  className="copyButton"
-                  disabled={copySuccess}
-                >
-                  {copySuccess ? 'Copied!' : <FaCopy />}
-                </button>
-              </div>
-            </div>
-            
-            <div className="connectionControls">
-              <div className="inputWrapper">
-                <input
-                  type="text"
-                  placeholder={userRole === 'therapist' ? "Enter client's ID" : "Enter therapist's ID"}
-                  value={remotePeerId}
-                  onChange={(e) => setRemotePeerId(e.target.value)}
-                  className="peerIdInput"
-                />
-              </div>
-              
-              <div className="buttonGroup">
-                <button
-                  onClick={() => connectToPeer(remotePeerId)}
-                  disabled={!localStream || !remotePeerId || remoteStream !== null}
-                  className="connectButton"
-                >
-                  <FaPlay /> Connect
-                </button>
                 
-                <button
-                  onClick={disconnectCall}
-                  disabled={!remoteStream}
-                  className="disconnectButton"
-                >
-                  <FaStop /> End Session
-                </button>
+                <div className="controlsPanel">
+                  <div className="statusBar">
+                    <div className="connectionStatus">
+                      <span className={`statusDot ${connectionStatus.includes('Connected') ? 'connected' : ''}`}></span>
+                      <p>{connectionStatus}</p>
+                    </div>
+                    
+                    <div className="peerIdContainer">
+                      <div className="peerIdDisplay">
+                        <span>Your ID:</span>
+                        <code>{peerId}</code>
+                      </div>
+                      <button 
+                        onClick={handleCopy} 
+                        className="copyButton"
+                        disabled={copySuccess}
+                      >
+                        {copySuccess ? 'Copied!' : <FaCopy />}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="connectionControls">
+                    <div className="inputWrapper">
+                      <input
+                        type="text"
+                        placeholder={userRole === 'therapist' ? "Enter client's ID" : "Enter therapist's ID"}
+                        value={remotePeerId}
+                        onChange={(e) => setRemotePeerId(e.target.value)}
+                        className="peerIdInput"
+                      />
+                    </div>
+                    
+                    <div className="buttonGroup">
+                      <button
+                        onClick={() => {
+                          connectToPeer(remotePeerId);
+                          closeControlPanel();
+                        }}
+                        disabled={!localStream || !remotePeerId || remoteStream !== null}
+                        className="connectButton"
+                      >
+                        <FaPlay /> Connect
+                      </button>
+                      
+                      <button
+                        onClick={disconnectCall}
+                        disabled={!remoteStream}
+                        className="disconnectButton"
+                      >
+                        <FaStop /> End Session
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Media Control Bar */}
-          <div className="mediaControlBar">
-            <div className="mediaControlsWrapper">
-              <button 
-                onClick={toggleVideo}
-                className={`mediaButton ${!videoEnabled ? 'disabled' : ''}`}
-                disabled={!localStream}
-              >
-                {videoEnabled ? <FaVideo /> : <FaVideoSlash />}
-                <span>{videoEnabled ? 'Disable Video' : 'Enable Video'}</span>
-              </button>
-              <button 
-                onClick={toggleAudio}
-                className={`mediaButton ${!audioEnabled ? 'disabled' : ''}`}
-                disabled={!localStream}
-              >
-                {audioEnabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
-                <span>{audioEnabled ? 'Mute Audio' : 'Unmute Audio'}</span>
-              </button>
-            </div>
-          </div>
+          <MediaControlBar
+            toggleVideo={toggleVideo}
+            toggleAudio={toggleAudio}
+            toggleVisual={toggleVisual}
+            videoEnabled={videoEnabled}
+            audioEnabled={audioEnabled}
+            visualActive={visualActive}
+            localStream={localStream}
+            userRole={userRole}
+          />
         </div>
       </div>
       <footer className="footer">

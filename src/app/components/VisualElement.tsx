@@ -2,161 +2,74 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePeer } from '../context/PeerContext';
+import styles from './VisualElement.module.css';
 
 interface VisualElementProps {
-  size?: number;       // Circle size in pixels
-  speed?: number;      // Speed of movement (seconds for one full cycle)
-  distance?: number;   // Distance to move (in pixels)
-  color?: string;      // Color of the circle
-  isActive?: boolean;  // Whether the animation is playing
-  peerControlled?: boolean; // Whether it should be controlled by peer messages
+  isActive: boolean;
+  peerControlled?: boolean;
 }
 
 const VisualElement: React.FC<VisualElementProps> = ({
-  size = 50,
-  speed = 2,
-  distance = 300,
-  color = '#4A90E2',
-  isActive = true,
-  peerControlled = true // Default to true since we want peer control
+  isActive = false,
+  peerControlled = false
 }) => {
-  const [isAnimating, setIsAnimating] = useState(isActive);
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { animationActive } = usePeer();
   
-  // Get peer context to receive commands
-  const { 
-    animationActive, 
-    startAnimation: startPeerAnimation,
-    stopAnimation: stopPeerAnimation 
-  } = usePeer();
-
-  // Effect to handle peer-controlled animation
+  // Determine if the ball should be active based on who controls it
+  const showBall = peerControlled ? animationActive : isActive;
+  
+  // Set up and clean up timers
   useEffect(() => {
-    if (peerControlled) {
-      setIsAnimating(animationActive);
+    if (showBall) {
+      // Start with 20 seconds
+      setTimeLeft(20);
       
-      if (animationActive) {
-        setTimeRemaining(20);
-        
-        // Clear any existing timer
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-        }
-        
-        // Set a new timer to turn off animation after 20 seconds
-        timerRef.current = setTimeout(() => {
-          setIsAnimating(false);
-          setTimeRemaining(null);
-          timerRef.current = null;
-          // Also notify peers animation has stopped
-          stopPeerAnimation();
-        }, 20000);
-        
-        // Update the countdown display every second
-        const countdownInterval = setInterval(() => {
-          setTimeRemaining(prev => {
-            if (prev === null || prev <= 1) {
-              clearInterval(countdownInterval);
-              return null;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      } else {
-        // If peer stopped the animation, clear timer
-        setTimeRemaining(null);
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-          timerRef.current = null;
-        }
-      }
-    }
-  }, [animationActive, peerControlled, stopPeerAnimation]);
-
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
-
-  const circleStyle = {
-    width: `${size}px`,
-    height: `${size}px`,
-    backgroundColor: color,
-    '--distance': `${distance / 2}px`
-  } as React.CSSProperties;
-
-  const handleClick = () => {
-    // If animation is currently off, turn it on and start timer
-    if (!isAnimating) {
-      if (peerControlled) {
-        // Use peer control system to notify others too
-        startPeerAnimation();
-      } else {
-        // Local-only animation control
-        setIsAnimating(true);
-        setTimeRemaining(20);
-        
-        // Clear any existing timer
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-        }
-        
-        // Set a new timer to turn off animation after 20 seconds
-        timerRef.current = setTimeout(() => {
-          setIsAnimating(false);
-          setTimeRemaining(null);
-          timerRef.current = null;
-        }, 20000);
-        
-        // Update the countdown display every second
-        const countdownInterval = setInterval(() => {
-          setTimeRemaining(prev => {
-            if (prev === null || prev <= 1) {
-              clearInterval(countdownInterval);
-              return null;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      }
+      // Clear any existing timers
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      
+      // Set up the countdown timer
+      intervalRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev && prev > 1) return prev - 1;
+          return null;
+        });
+      }, 1000);
+      
+      // Set timer to auto-stop after 20 seconds
+      timerRef.current = setTimeout(() => {
+        setTimeLeft(null);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      }, 20000);
     } else {
-      // If animation is currently on, turn it off and clear timer
-      if (peerControlled) {
-        // Use peer control system to notify others too
-        stopPeerAnimation();
-      } else {
-        // Local-only animation control
-        setIsAnimating(false);
-        setTimeRemaining(null);
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-          timerRef.current = null;
-        }
-      }
+      // Clean up if ball is hidden
+      setTimeLeft(null);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
     }
-  };
+    
+    // Cleanup on unmount
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [showBall]);
 
+  // Don't render anything if not active
+  if (!showBall) return null;
+  
   return (
-    <>
-      <div className="container">
-        {isAnimating && (
-          <div 
-            className={["circle", isAnimating ? "animate" : ''].join(' ')} 
-            style={circleStyle} 
-          />
-        )}
-      </div>
-      <div className="controlContainer">
-        <button className="button" onClick={handleClick}>
-          {isAnimating ? `Stop (${timeRemaining ?? 20}s)` : 'Start Animation (20s)'}
-        </button>
-      </div>
-    </>
+    <div className={styles.container}>
+      <div className={`${styles.ball} ${styles.moving}`}></div>
+      {timeLeft !== null && (
+        <div className={styles.timer}>
+          {timeLeft} seconds
+        </div>
+      )}
+    </div>
   );
 };
 
