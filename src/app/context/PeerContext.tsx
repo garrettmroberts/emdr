@@ -11,11 +11,6 @@ const debugLog = (...args: any[]) => {
   console.log(DEBUG_PREFIX, ...args);
 };
 
-// Add this at the top of your file with other utilities
-const isMobileDevice = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-};
-
 interface PeerContextType {
   peerId: string | null;
   peer: Peer | null;
@@ -119,48 +114,11 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (remoteStream && remoteVideoRef.current) {
       console.log('Setting remote stream to video element');
-      debugLog(`Remote stream tracks: video=${remoteStream.getVideoTracks().length}, audio=${remoteStream.getAudioTracks().length}`);
       remoteVideoRef.current.srcObject = remoteStream;
 
-      // Create a more robust play mechanism with user interaction fallback
-      const playVideo = async () => {
-        try {
-          await remoteVideoRef.current?.play();
-          debugLog('Remote video playback started successfully');
-        } catch (err) {
-          console.error('Error playing remote video:', err);
-          debugLog('Autoplay prevented - creating play button overlay');
-          
-          // Create an overlay with a play button that the user can click
-          const videoParent = remoteVideoRef?.current?.parentElement;
-          if (videoParent) {
-            const overlay = document.createElement('div');
-            overlay.style.position = 'absolute';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100%';
-            overlay.style.height = '100%';
-            overlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
-            overlay.style.display = 'flex';
-            overlay.style.justifyContent = 'center';
-            overlay.style.alignItems = 'center';
-            overlay.style.zIndex = '100';
-            overlay.innerHTML = '<button style="padding:15px 30px;font-size:18px;cursor:pointer;background:#4285F4;color:white;border:none;border-radius:4px;">Tap to Enable Video</button>';
-            videoParent.appendChild(overlay);
-            
-            overlay.onclick = async () => {
-              try {
-                await remoteVideoRef.current?.play();
-                videoParent.removeChild(overlay);
-              } catch (e) {
-                console.error('Still cannot play video after user interaction:', e);
-              }
-            };
-          }
-        }
-      };
-      
-      playVideo();
+      remoteVideoRef.current.play().catch(err => {
+        console.error('Error playing remote video:', err);
+      });
     }
   }, [remoteStream]);
 
@@ -178,18 +136,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     debugLog('Requesting user media...');
     try {
       debugLog('MediaDevices API available:', !!navigator.mediaDevices);
-      debugLog('Device type: ' + (isMobileDevice() ? 'Mobile' : 'Desktop'));
-      
-      // Adjust constraints based on device type
-      const constraints = {
-        video: {
-          width: { ideal: isMobileDevice() ? 480 : 640 },
-          height: { ideal: isMobileDevice() ? 360 : 480 },
-          frameRate: { max: isMobileDevice() ? 15 : 24 }
-        },
-        audio: true
-      };
-      
+      const constraints = { video: true, audio: true };
       debugLog('Using constraints:', constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       debugLog(`Got local stream ID: ${stream.id}`);
@@ -424,23 +371,6 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     call.on('stream', (incomingStream) => {
       debugLog(`Received remote stream ID: ${incomingStream.id}`);
       debugLog(`Remote stream tracks: video=${incomingStream.getVideoTracks().length}, audio=${incomingStream.getAudioTracks().length}`);
-      
-      // Check individual tracks for problems
-      incomingStream.getTracks().forEach((track, index) => {
-        debugLog(`Track ${index}: kind=${track.kind}, enabled=${track.enabled}, readyState=${track.readyState}`);
-        
-        // Enable tracks if they're not enabled
-        if (!track.enabled) {
-          debugLog(`Enabling disabled ${track.kind} track`);
-          track.enabled = true;
-        }
-        
-        // Listen for track ended events
-        track.onended = () => debugLog(`Remote ${track.kind} track ended`);
-        track.onmute = () => debugLog(`Remote ${track.kind} track muted`);
-        track.onunmute = () => debugLog(`Remote ${track.kind} track unmuted`);
-      });
-      
       setRemoteStream(incomingStream);
       setIsConnected(true);
       setConnectionStatus(`Connected to ${call.peer}`);
@@ -517,60 +447,11 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         debugLog(`Connection state changed: ${call.peerConnection.connectionState}`);
       };
     }
-
-    // Add connection state monitoring with reconnection logic
-    if (call.peerConnection) {
-      const connectionStateTimer = setInterval(() => {
-        if (!call.peerConnection) {
-          clearInterval(connectionStateTimer);
-          return;
-        }
-        
-        const state = call.peerConnection.connectionState;
-        debugLog(`Current connection state: ${state}`);
-        
-        // Handle different connection states
-        if (state === 'failed' || state === 'disconnected') {
-          debugLog('Connection in problem state, checking remote stream');
-          if (remoteStream) {
-            const activeTracks = remoteStream.getTracks().filter(t => t.readyState === 'live');
-            debugLog(`Active tracks: ${activeTracks.length}`);
-            
-            if (activeTracks.length === 0) {
-              debugLog('No active tracks, attempting reconnection');
-              // Optional: implement reconnection logic here
-            }
-          }
-        }
-      }, 5000); // Check every 5 seconds
-      
-      // Clean up timer when call ends
-      call.on('close', () => {
-        clearInterval(connectionStateTimer);
-      });
-    }
     
     // Handle the incoming stream
     call.on('stream', (incomingStream) => {
       debugLog(`Received remote stream ID: ${incomingStream.id}`);
       debugLog(`Remote stream tracks: video=${incomingStream.getVideoTracks().length}, audio=${incomingStream.getAudioTracks().length}`);
-      
-      // Check individual tracks for problems
-      incomingStream.getTracks().forEach((track, index) => {
-        debugLog(`Track ${index}: kind=${track.kind}, enabled=${track.enabled}, readyState=${track.readyState}`);
-        
-        // Enable tracks if they're not enabled
-        if (!track.enabled) {
-          debugLog(`Enabling disabled ${track.kind} track`);
-          track.enabled = true;
-        }
-        
-        // Listen for track ended events
-        track.onended = () => debugLog(`Remote ${track.kind} track ended`);
-        track.onmute = () => debugLog(`Remote ${track.kind} track muted`);
-        track.onunmute = () => debugLog(`Remote ${track.kind} track unmuted`);
-      });
-      
       setRemoteStream(incomingStream);
       setIsConnected(true);
       setConnectionStatus(`Connected to ${call.peer}`);
