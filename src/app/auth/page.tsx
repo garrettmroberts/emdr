@@ -101,7 +101,7 @@ export default function AuthPage() {
         <div className="switchMode">
           {isLogin ? (
             <p>
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <button onClick={() => setIsLogin(false)}>Sign Up</button>
             </p>
           ) : (
