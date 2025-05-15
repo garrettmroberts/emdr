@@ -60,6 +60,10 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const pendingCalls = useRef<Array<MediaConnection>>([]);
   const dataConnections = useRef<Map<string, DataConnection>>(new Map());
 
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const MAX_RECONNECT_ATTEMPTS = 3;
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     debugLog(`Setting up peer ID: ${user?.email ? 'Using email' : 'Using random ID'}`);
     if (user?.email) {
@@ -264,31 +268,19 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const config = {
       config: {
         iceServers: [
-          {
-            urls: "stun:stun.relay.metered.ca:80",
-          },
-          {
-            urls: "turn:standard.relay.metered.ca:80",
+          { urls: "stun:stun.relay.metered.ca:80" },
+          { 
+            urls: [
+              "turn:standard.relay.metered.ca:80?transport=tcp",
+              "turn:standard.relay.metered.ca:443",
+              "turns:standard.relay.metered.ca:443?transport=tcp"
+            ],
             username: "e0b8ed8486864ada6306d24c",
             credential: "LkaWhN5JgNLTp4tm",
-          },
-          {
-            urls: "turn:standard.relay.metered.ca:80?transport=tcp",
-            username: "e0b8ed8486864ada6306d24c",
-            credential: "LkaWhN5JgNLTp4tm",
-          },
-          {
-            urls: "turn:standard.relay.metered.ca:443",
-            username: "e0b8ed8486864ada6306d24c",
-            credential: "LkaWhN5JgNLTp4tm",
-          },
-          {
-            urls: "turns:standard.relay.metered.ca:443?transport=tcp",
-            username: "e0b8ed8486864ada6306d24c",
-            credential: "LkaWhN5JgNLTp4tm",
-          },
+          }
         ],
         iceCandidatePoolSize: 10,
+        iceTransportPolicy: 'relay',
       },
       debug: 3
     };
@@ -345,6 +337,29 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setPeer(newPeer);
   };
 
+  const attemptReconnection = () => {
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && remotePeerId) {
+      debugLog(`Connection failed, attempting reconnection ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}`);
+      setReconnectAttempts(prev => prev + 1);
+      
+      // Clear any existing timers
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+      }
+      
+      // Disconnect existing call
+      disconnectCall();
+      
+      // Wait before reconnecting
+      reconnectTimerRef.current = setTimeout(() => {
+        debugLog(`Reconnecting to: ${remotePeerId}`);
+        connectToPeer(remotePeerId);
+      }, 2000);
+    } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      setConnectionStatus(`Connection failed after ${MAX_RECONNECT_ATTEMPTS} attempts`);
+    }
+  };
+
   const answerCall = (call: MediaConnection) => {
     debugLog(`Answering call from ${call.peer}`);
     if (!localStream) {
@@ -390,17 +405,64 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     setConnectionStatus(`Calling ${remotePeerId}...`);
-
-    debugLog(`Calling with stream ID: ${localStream.id}`);
-    const call = peer.call(remotePeerId, localStream);
+    
+    // Create optimized stream with lower bitrate for better reliability
+    const optimizedStream = new MediaStream();
+    
+    // Add video track with constraints
+    if (localStream.getVideoTracks().length > 0) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack.getConstraints) {
+        debugLog('Original video constraints:', videoTrack.getConstraints());
+      }
+      
+      try {
+        // Apply constraints to reduce quality for better transmission
+        videoTrack.applyConstraints({
+          width: { ideal: 320, max: 640 },
+          height: { ideal: 240, max: 480 },
+          frameRate: { max: 15 }
+        }).catch(e => debugLog('Could not apply video constraints:', e));
+      } catch (err) {
+        debugLog('Error applying constraints:', err);
+      }
+      
+      optimizedStream.addTrack(videoTrack);
+    }
+    
+    // Add audio track with reduced quality
+    if (localStream.getAudioTracks().length > 0) {
+      optimizedStream.addTrack(localStream.getAudioTracks()[0]);
+    }
+    
+    debugLog(`Calling with optimized stream ID: ${optimizedStream.id}`);
+    debugLog(`Optimized stream tracks: video=${optimizedStream.getVideoTracks().length}, audio=${optimizedStream.getAudioTracks().length}`);
+    
+    // Force TURN relay with call options
+    const callOptions = {
+      sdpTransform: (sdp: string) => {
+        // Force usage of relay ICE candidates by removing host and srflx candidates
+        debugLog('Transforming SDP to force TURN relay');
+        return sdp.replace(/a=candidate.*typ host.*\r\n/g, '')
+                 .replace(/a=candidate.*typ srflx.*\r\n/g, '');
+      }
+    };
+    
+    const call = peer.call(remotePeerId, optimizedStream, callOptions);
     activeCalls.current.set(remotePeerId, call);
-
+    
     call.on('stream', (incomingStream) => {
       debugLog(`Got remote stream from call: ${incomingStream.id}`);
       debugLog(`Remote stream has video: ${incomingStream.getVideoTracks().length > 0}`);
       setRemoteStream(incomingStream);
       setIsConnected(true);
       setConnectionStatus(`Connected to ${remotePeerId}`);
+      
+      // Reset reconnection counter when we get a stream
+      setReconnectAttempts(0);
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+      }
     });
 
     call.on('error', (err) => {
@@ -427,17 +489,27 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Monitor ICE connection state
       call.peerConnection.oniceconnectionstatechange = () => {
-        debugLog(`ICE connection state: ${call.peerConnection.iceConnectionState}`);
+        const state = call.peerConnection.iceConnectionState;
+        debugLog(`ICE connection state: ${state}`);
         
-        // Add fallback for failed connections
-        if (call.peerConnection.iceConnectionState === 'failed') {
-          debugLog('Connection failed - attempting ICE restart');
+        if (state === 'failed' || state === 'disconnected') {
+          // Try to restart ICE connection
           try {
-            // Try to restart ICE if connection fails
             call.peerConnection.restartIce?.();
+            
+            // If we're completely failed, try a full reconnection
+            if (state === 'failed') {
+              attemptReconnection();
+            }
           } catch (err) {
             console.error(`${DEBUG_PREFIX} ICE restart error:`, err);
+            attemptReconnection();
           }
+        }
+        
+        // Reset reconnection counter on successful connection
+        if (state === 'connected' || state === 'completed') {
+          setReconnectAttempts(0);
         }
       };
       
