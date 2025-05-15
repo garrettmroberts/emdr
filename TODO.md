@@ -1,0 +1,2 @@
+- Remove current socketid when user exits page
+- Tell user to check email on signup

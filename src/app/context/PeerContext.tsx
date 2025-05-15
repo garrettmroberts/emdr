@@ -260,17 +260,33 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const createPeer = (peerId: string) => {
     debugLog(`Creating peer with ID: ${peerId}`);
-
+    
     const config = {
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-        ]
+          { urls: 'stun:stun1.google.com:19302' },
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          }
+        ],
+        iceCandidatePoolSize: 10,
       },
       debug: 3
     };
-
+    
     debugLog('Peer configuration:', config);
     const newPeer = new Peer(peerId, config);
 
@@ -396,12 +412,39 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     if (call.peerConnection) {
+      debugLog('Setting up detailed ICE monitoring');
+      
+      // Monitor ICE gathering state
+      call.peerConnection.onicegatheringstatechange = () => {
+        debugLog(`ICE gathering state: ${call.peerConnection.iceGatheringState}`);
+      };
+      
+      // Monitor ICE connection state
       call.peerConnection.oniceconnectionstatechange = () => {
         debugLog(`ICE connection state: ${call.peerConnection.iceConnectionState}`);
+        
+        // Add fallback for failed connections
+        if (call.peerConnection.iceConnectionState === 'failed') {
+          debugLog('Connection failed - attempting ICE restart');
+          try {
+            // Try to restart ICE if connection fails
+            call.peerConnection.restartIce?.();
+          } catch (err) {
+            console.error(`${DEBUG_PREFIX} ICE restart error:`, err);
+          }
+        }
       };
-
+      
+      // Monitor connection state
       call.peerConnection.onconnectionstatechange = () => {
         debugLog(`Connection state: ${call.peerConnection.connectionState}`);
+      };
+      
+      // Log individual ICE candidates
+      call.peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          debugLog(`ICE candidate: ${event.candidate.candidate.split(' ')[7]}`);
+        }
       };
     }
   };
