@@ -4,6 +4,13 @@ import React, { createContext, useContext, useState, useRef, useEffect, ReactNod
 import Peer, { MediaConnection, DataConnection } from 'peerjs';
 import { useAuth } from './AuthContext';
 
+const DEBUG_PREFIX = '🔄 [PEER DEBUG]';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const debugLog = (...args: any[]) => {
+  console.log(DEBUG_PREFIX, ...args);
+};
+
 interface PeerContextType {
   peerId: string | null;
   peer: Peer | null;
@@ -36,7 +43,7 @@ export const usePeer = () => {
 };
 
 export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user } = useAuth(); // Add this line to get the current user
+  const { user } = useAuth();
   const [peerId, setPeerId] = useState<string | null>(null);
   const [peer, setPeer] = useState<Peer | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -54,29 +61,30 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const dataConnections = useRef<Map<string, DataConnection>>(new Map());
 
   useEffect(() => {
-    // Use email as peerId if available, otherwise generate random ID
+    debugLog(`Setting up peer ID: ${user?.email ? 'Using email' : 'Using random ID'}`);
     if (user?.email) {
-      // Use email but replace special characters that aren't allowed in peer IDs
       const sanitizedEmail = user.email.replace(/[^a-zA-Z0-9]/g, '-');
       setPeerId(sanitizedEmail);
     } else {
-      // Fallback to random ID if no email is available
       const randomId = Math.random().toString(36).substring(2, 10);
       setPeerId(randomId);
     }
-  }, [user]); // Depend on user so it updates when user changes
+  }, [user]);
 
-  // This effect should start running when peerId is set
   useEffect(() => {
     if (peerId) {
-      getUserMedia().then(() => {
+      debugLog(`Initializing with peer ID: ${peerId}`);
+      getUserMedia().then((stream) => {
+        debugLog(`Got user media, tracks: ${stream.getTracks().length}`);
+        debugLog(`Video tracks: ${stream.getVideoTracks().length}, audio tracks: ${stream.getAudioTracks().length}`);
         createPeer(peerId);
       }).catch(err => {
-        console.error('Failed to get user media:', err);
+        console.error(`${DEBUG_PREFIX} Failed to get user media:`, err);
+        debugLog(`Creating peer without media: ${peerId}`);
         createPeer(peerId);
       });
     }
-    
+
     return () => {
       if (peer) {
         peer.destroy();
@@ -101,7 +109,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (remoteStream && remoteVideoRef.current) {
       console.log('Setting remote stream to video element');
       remoteVideoRef.current.srcObject = remoteStream;
-      
+
       remoteVideoRef.current.play().catch(err => {
         console.error('Error playing remote video:', err);
       });
@@ -119,21 +127,22 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [localStream]);
 
   const getUserMedia = async () => {
-    console.log('Requesting user media...');
+    debugLog('Requesting user media...');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
-      });
-      console.log('Got local stream:', stream.id);
+      debugLog('MediaDevices API available:', !!navigator.mediaDevices);
+      const constraints = { video: true, audio: true };
+      debugLog('Using constraints:', constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      debugLog(`Got local stream ID: ${stream.id}`);
       setLocalStream(stream);
       return stream;
-    } catch (err) {
-      console.error('Failed to get local stream', err);
-      setConnectionStatus('Camera/mic access failed');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      console.error(`${DEBUG_PREFIX} Media access error:`, err);
+      setConnectionStatus(`Media access error: ${err?.name || err?.message || err}`);
       throw err;
     }
-  }
+  };
 
   const copyPeerId = () => {
     if (peerId) {
@@ -157,16 +166,16 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Received data:', data);
       handleDataMessage(data as string);
     });
-    
+
     conn.on('close', () => {
       console.log('Data connection closed:', conn.peer);
       dataConnections.current.delete(conn.peer);
     });
-    
+
     conn.on('error', (err) => {
       console.error('Data connection error:', err);
     });
-    
+
     dataConnections.current.set(conn.peer, conn);
   };
 
@@ -178,25 +187,19 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const handleDataMessage = (data: string) => {
     console.log('Message received:', data);
-    
-    // Handle visual control messages
+
     if (data === 'start-visual') {
       console.log('Starting visual animation');
       setAnimationActive(true);
-      
-      // Auto turn off after 20 seconds to stay in sync
+
       setTimeout(() => {
         setAnimationActive(false);
       }, 20000);
-    } 
-    else if (data === 'stop-visual') {
+    } else if (data === 'stop-visual') {
       setAnimationActive(false);
-    }
-    // Handle other message types (video enabled/disabled, etc.)
-    else if (data === 'video-disabled') {
+    } else if (data === 'video-disabled') {
       setRemoteVideoEnabled(false);
-    }
-    else if (data === 'video-enabled') {
+    } else if (data === 'video-enabled') {
       setRemoteVideoEnabled(true);
     }
   };
@@ -205,19 +208,19 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (dataConnections.current.has(peerId)) {
       return dataConnections.current.get(peerId) || null;
     }
-    
+
     if (!peer) {
       console.error('Cannot create data connection: Peer not initialized');
       return null;
     }
-    
+
     try {
       const conn = peer.connect(peerId);
-      
+
       conn.on('open', () => {
         console.log('Data connection opened with:', peerId);
       });
-      
+
       setupDataConnectionListeners(conn);
       return conn;
     } catch (err) {
@@ -231,12 +234,12 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Cannot send message: No remote peer specified');
       return false;
     }
-    
+
     const conn = getOrCreateDataConnection(remotePeerId);
     if (!conn) {
       return false;
     }
-    
+
     try {
       if (conn.open) {
         conn.send(message);
@@ -256,9 +259,9 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const createPeer = (peerId: string) => {
-    console.log('Creating peer with ID:', peerId);
-    
-    const newPeer = new Peer(peerId, {
+    debugLog(`Creating peer with ID: ${peerId}`);
+
+    const config = {
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
@@ -266,123 +269,151 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ]
       },
       debug: 3
-    });
-    
+    };
+
+    debugLog('Peer configuration:', config);
+    const newPeer = new Peer(peerId, config);
+
     newPeer.on('open', (id) => {
-      console.log('Peer connection opened with ID:', id);
+      debugLog(`Peer connection opened with ID: ${id}`);
       setPeer(newPeer);
-      
+
       newPeer.on('call', (call) => {
-        console.log('Incoming call from:', call.peer);
-        
-        // Set remotePeerId when call is received
+        debugLog(`Incoming call from: ${call.peer}`);
         setRemotePeerId(call.peer);
-        
+
         if (localStream) {
+          debugLog(`Answering call immediately with stream ID: ${localStream.id}`);
           answerCall(call);
         } else {
-          console.log('No local stream available yet, adding call to pending queue');
+          debugLog('No local stream available yet, adding call to pending queue');
           setConnectionStatus('Getting camera access to answer call...');
           pendingCalls.current.push(call);
-          
-          getUserMedia().then(() => {});
+
+          getUserMedia().catch(err => {
+            console.error(`${DEBUG_PREFIX} Failed to get media for pending call:`, err);
+          });
         }
       });
-      
+
       newPeer.on('connection', (conn) => {
-        console.log('Incoming data connection from:', conn.peer);
+        debugLog(`Incoming data connection from: ${conn.peer}`);
+        debugLog(`Connection ready state: ${conn.open ? 'open' : 'not open'}`);
         setupDataConnectionListeners(conn);
         setupDataChannel(conn);
       });
     });
 
     newPeer.on('error', (err) => {
-      console.error('Peer error:', err);
-      setConnectionStatus(`Error: ${err.type}`);
+      console.error(`${DEBUG_PREFIX} Peer error:`, err);
+      debugLog(`Error type: ${err.type}, Error message: ${err.message}`);
+      setConnectionStatus(`Error: ${err.type} - ${err.message || ''}`);
     });
 
-    newPeer.on('connection', (conn) => {
-      console.log('Data connection established:', conn.peer);
+    newPeer.on('disconnected', () => {
+      debugLog('Peer disconnected from server');
+      setConnectionStatus('Disconnected from server');
     });
-    
+
+    newPeer.on('close', () => {
+      debugLog('Peer connection closed');
+      setConnectionStatus('Connection closed');
+    });
+
     setPeer(newPeer);
-  }
+  };
 
   const answerCall = (call: MediaConnection) => {
+    debugLog(`Answering call from ${call.peer}`);
     if (!localStream) {
-      console.error('Cannot answer call without local stream');
+      console.error(`${DEBUG_PREFIX} Cannot answer call without local stream`);
       return;
     }
 
     setConnectionStatus(`Answering call from ${call.peer}...`);
-    setRemotePeerId(call.peer); // Ensure remotePeerId is set here too
-    
+    setRemotePeerId(call.peer);
+
     activeCalls.current.set(call.peer, call);
-    
-    console.log('Answering call with stream:', localStream.id);
+
+    debugLog(`Answering call with stream ID: ${localStream.id}`);
     call.answer(localStream);
-    
+
     call.on('stream', (incomingStream) => {
-      console.log('Received remote stream from incoming call:', incomingStream.id);
+      debugLog(`Received remote stream ID: ${incomingStream.id}`);
+      debugLog(`Remote stream tracks: video=${incomingStream.getVideoTracks().length}, audio=${incomingStream.getAudioTracks().length}`);
       setRemoteStream(incomingStream);
       setIsConnected(true);
       setConnectionStatus(`Connected to ${call.peer}`);
     });
-    
+
     call.on('close', () => {
-      console.log('Incoming call closed');
+      debugLog(`Call from ${call.peer} closed`);
       setIsConnected(false);
       setRemoteStream(null);
       setConnectionStatus('Call ended');
       activeCalls.current.delete(call.peer);
     });
-    
+
     call.on('error', (err) => {
-      console.error('Call error:', err);
+      console.error(`${DEBUG_PREFIX} Call error:`, err);
       setConnectionStatus(`Call error: ${err}`);
     });
   };
 
   const callPeer = (remotePeerId: string) => {
+    debugLog(`Attempting to call peer: ${remotePeerId}`);
     if (!peer || !localStream) {
-      console.error('Cannot call: Peer not initialized or no local stream');
+      console.error(`${DEBUG_PREFIX} Cannot call: Peer initialized=${!!peer}, LocalStream=${!!localStream}`);
       return;
     }
-    
-    console.log('Attempting to call peer:', remotePeerId);
+
     setConnectionStatus(`Calling ${remotePeerId}...`);
-        
-    console.log('Calling with stream:', localStream.id);
+
+    debugLog(`Calling with stream ID: ${localStream.id}`);
     const call = peer.call(remotePeerId, localStream);
     activeCalls.current.set(remotePeerId, call);
-    
+
     call.on('stream', (incomingStream) => {
-      console.log('Got remote stream from outgoing call:', incomingStream.id);
+      debugLog(`Got remote stream from call: ${incomingStream.id}`);
+      debugLog(`Remote stream has video: ${incomingStream.getVideoTracks().length > 0}`);
       setRemoteStream(incomingStream);
       setIsConnected(true);
       setConnectionStatus(`Connected to ${remotePeerId}`);
     });
 
     call.on('error', (err) => {
-      console.error('Call error:', err);
+      console.error(`${DEBUG_PREFIX} Call error:`, err);
+      debugLog(`Call error type: ${typeof err === 'object' ? JSON.stringify(err) : err}`);
       setConnectionStatus(`Call error: ${err}`);
     });
 
     call.on('close', () => {
-      console.log('Call closed');
+      debugLog(`Call to ${remotePeerId} closed`);
       setIsConnected(false);
       setRemoteStream(null);
       setConnectionStatus('Call ended');
       activeCalls.current.delete(remotePeerId);
     });
-  }
+
+    if (call.peerConnection) {
+      call.peerConnection.oniceconnectionstatechange = () => {
+        debugLog(`ICE connection state: ${call.peerConnection.iceConnectionState}`);
+      };
+
+      call.peerConnection.onconnectionstatechange = () => {
+        debugLog(`Connection state: ${call.peerConnection.connectionState}`);
+      };
+    }
+  };
 
   const disconnectCall = () => {
-    activeCalls.current.forEach((call) => {
+    debugLog(`Disconnecting all calls: ${activeCalls.current.size} active calls`);
+    activeCalls.current.forEach((call, peerId) => {
+      debugLog(`Closing call with ${peerId}`);
       call.close();
     });
     activeCalls.current.clear();
-    
+
     setIsConnected(false);
     setRemoteStream(null);
     setConnectionStatus('Disconnected');
@@ -390,13 +421,22 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const connectToPeer = (id: string = remotePeerId) => {
     if (id) {
+      debugLog(`Connecting to peer: ${id}`);
       callPeer(id);
+
+      debugLog('Creating data connection');
       const conn = peer?.connect(id);
       if (conn) {
+        debugLog(`Data connection created, waiting for open`);
         conn.on('open', () => {
+          debugLog(`Data connection opened with ${id}`);
           setupDataChannel(conn);
         });
+      } else {
+        debugLog('Failed to create data connection');
       }
+    } else {
+      debugLog('Cannot connect: No remote peer ID specified');
     }
   };
 
@@ -404,7 +444,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAnimationActive(true);
     sendMessageToPeer('start-visual');
   };
-  
+
   const stopAnimation = () => {
     setAnimationActive(false);
     sendMessageToPeer('stop-visual');
