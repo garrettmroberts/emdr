@@ -41,6 +41,8 @@ export default function ProfilePage() {
           email: user.email || '',
           role: data.role || userRole || 'client'
         });
+      } else if (error) {
+        console.error('Error loading profile:', error);
       }
     };
     
@@ -78,40 +80,40 @@ export default function ProfilePage() {
   }
   
   return (
-    <div className={styles.profileContainer}>
-      <div className={styles.profileCard}>
+    <div className="profileContainer">
+      <div className="profileCard">
         <h1>Your Profile</h1>
         
         {message && (
-          <div className={message.includes('Error') ? styles.error : styles.success}>
+          <div className={message.includes('Error') ? "error" : "success"}>
             {message}
           </div>
         )}
         
         <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}>
+          <div className="formGroup">
             <label htmlFor="email">Email</label>
             <input
               id="email"
               type="email"
               value={profile.email}
               disabled
-              className={styles.disabledInput}
+              className="disabledInput"
             />
           </div>
           
-          <div className={styles.formGroup}>
+          <div className="formGroup">
             <label htmlFor="role">Role</label>
             <input
               id="role"
               type="text"
               value={profile.role === 'therapist' ? 'Therapist' : 'Client'}
               disabled
-              className={styles.disabledInput}
+              className="disabledInput"
             />
           </div>
           
-          <div className={styles.formGroup}>
+          <div className="formGroup">
             <label htmlFor="firstName">First Name</label>
             <input
               id="firstName"
@@ -121,7 +123,7 @@ export default function ProfilePage() {
             />
           </div>
           
-          <div className={styles.formGroup}>
+          <div className="formGroup">
             <label htmlFor="lastName">Last Name</label>
             <input
               id="lastName"
@@ -134,7 +136,7 @@ export default function ProfilePage() {
           <button 
             type="submit" 
             disabled={isSaving}
-            className={styles.saveButton}
+            className="saveButton"
           >
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>

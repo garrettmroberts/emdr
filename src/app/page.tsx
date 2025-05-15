@@ -4,7 +4,7 @@ import { usePeer } from "./context/PeerContext";
 import VisualElement from "./components/VisualElement";
 import { useAuth } from "./context/AuthContext";
 import { useEffect, useState } from "react";
-import { FaCopy, FaPlay, FaStop, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaShieldAlt, FaLaptopMedical, FaBrain, FaRegCommentDots, FaPhone, FaTimes } from 'react-icons/fa';
+import { FaCopy, FaPlay, FaStop, FaVideoSlash, FaShieldAlt, FaLaptopMedical, FaBrain, FaRegCommentDots, FaPhone, FaTimes } from 'react-icons/fa';
 import Loader from "./components/Loader";
 import Image from 'next/image';
 import Header from "./components/Header";
@@ -353,7 +353,7 @@ export default function Home() {
             audioEnabled={audioEnabled}
             visualActive={visualActive}
             localStream={localStream}
-            userRole={userRole}
+            userRole={userRole || 'client'}
           />
         </div>
       </div>

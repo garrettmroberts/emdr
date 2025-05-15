@@ -155,7 +155,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const setupDataConnectionListeners = (conn: DataConnection) => {
     conn.on('data', (data) => {
       console.log('Received data:', data);
-      handleDataMessage(data);
+      handleDataMessage(data as string);
     });
     
     conn.on('close', () => {
