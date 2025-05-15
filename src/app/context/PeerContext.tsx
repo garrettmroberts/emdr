@@ -21,6 +21,7 @@ interface PeerContextType {
   animationActive: boolean;
   startAnimation: () => void;
   stopAnimation: () => void;
+  remoteVideoEnabled: boolean;
 }
 
 const PeerContext = createContext<PeerContextType | null>(null);
@@ -42,6 +43,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<string>('Disconnected');
   const [animationActive, setAnimationActive] = useState(false);
+  const [remoteVideoEnabled, setRemoteVideoEnabled] = useState<boolean>(true);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -151,6 +153,12 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else if (data.includes('stop-animation')) {
           console.log('Received animation stop command');
           setAnimationActive(false);
+        } else if (data === 'video-disabled') {
+          console.log('Remote peer disabled video');
+          setRemoteVideoEnabled(false);
+        } else if (data === 'video-enabled') {
+          console.log('Remote peer enabled video');
+          setRemoteVideoEnabled(true);
         }
       }
     });
@@ -383,6 +391,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     animationActive,
     startAnimation,
     stopAnimation,
+    remoteVideoEnabled,
   };
 
   return (

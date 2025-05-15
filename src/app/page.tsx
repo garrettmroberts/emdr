@@ -23,6 +23,8 @@ export default function Home() {
     remoteVideoRef,
     localStream,
     remoteStream,
+    sendMessageToPeer,
+    remoteVideoEnabled, // Add this line
   } = usePeer();
   
   const [copySuccess, setCopySuccess] = useState(false);
@@ -44,7 +46,7 @@ export default function Home() {
     setCopySuccess(true);
   };
 
-  // Toggle video stream - modified to properly stop camera
+  // Toggle video stream - modified to notify remote peer
   const toggleVideo = async () => {
     if (localStream) {
       if (videoEnabled) {
@@ -60,6 +62,10 @@ export default function Home() {
           // Remove tracks from the stream
           videoTracks.forEach(track => localStream.removeTrack(track));
         }
+        
+        // Notify remote peer that video is disabled
+        sendMessageToPeer('video-disabled');
+        
       } else {
         // Turn on video: Recreate video track
         try {
@@ -68,6 +74,10 @@ export default function Home() {
           
           // Add the new track to the existing stream
           localStream.addTrack(newVideoTrack);
+          
+          // Notify remote peer that video is enabled
+          sendMessageToPeer('video-enabled');
+          
         } catch (err) {
           console.error("Failed to restart camera:", err);
         }
@@ -232,6 +242,14 @@ export default function Home() {
             {!remoteStream && (
               <div className="noStreamOverlay">
                 <p>Waiting for connection...</p>
+              </div>
+            )}
+            
+            {/* Add this new overlay for when remote video is disabled */}
+            {remoteStream && !remoteVideoEnabled && (
+              <div className="remoteVideoDisabledOverlay">
+                <FaVideoSlash size={50} />
+                <p>Video Paused</p>
               </div>
             )}
             
