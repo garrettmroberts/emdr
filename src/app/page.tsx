@@ -4,7 +4,7 @@ import { usePeer } from "./context/PeerContext";
 import VisualElement from "./components/VisualElement";
 import { useAuth } from "./context/AuthContext";
 import { useEffect, useState } from "react";
-import { FaCopy, FaPlay, FaStop, FaVideoSlash, FaShieldAlt, FaLaptopMedical, FaBrain, FaRegCommentDots, FaPhone, FaTimes } from 'react-icons/fa';
+import { FaCopy, FaPlay, FaStop, FaVideoSlash, FaShieldAlt, FaLaptopMedical, FaBrain, FaRegCommentDots, FaPhone, FaTimes, FaPhoneSlash } from 'react-icons/fa';
 import Loader from "./components/Loader";
 import Image from 'next/image';
 import Header from "./components/Header";
@@ -26,6 +26,9 @@ export default function Home() {
     remoteStream,
     sendMessageToPeer,
     remoteVideoEnabled,
+    isCallRinging,
+    acceptCall,
+    rejectCall
   } = usePeer();
   
   const [copySuccess, setCopySuccess] = useState(false);
@@ -355,6 +358,32 @@ export default function Home() {
             localStream={localStream}
             userRole={userRole || 'client'}
           />
+
+          {/* Incoming Call Overlay */}
+          {isCallRinging && (
+            <div className="incomingCallOverlay">
+              <div className="incomingCallModal">
+                <h3>Incoming Call</h3>
+                <p>Someone wants to start a session with you</p>
+                
+                <div className="callActions">
+                  <button 
+                    onClick={acceptCall}
+                    className="acceptCallButton"
+                  >
+                    <FaPhone /> Accept
+                  </button>
+                  
+                  <button 
+                    onClick={rejectCall}
+                    className="rejectCallButton"
+                  >
+                    <FaPhoneSlash /> Decline
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <footer className="footer">

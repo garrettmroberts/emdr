@@ -30,6 +30,10 @@ interface PeerContextType {
   startAnimation: () => void;
   stopAnimation: () => void;
   remoteVideoEnabled: boolean;
+  isCallRinging: boolean;  // Add this
+  incomingCall: MediaConnection | null;  // Add this
+  acceptCall: () => void;  // Add this
+  rejectCall: () => void;  // Add this
 }
 
 const PeerContext = createContext<PeerContextType | null>(null);
@@ -53,6 +57,8 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [connectionStatus, setConnectionStatus] = useState<string>('Disconnected');
   const [animationActive, setAnimationActive] = useState(false);
   const [remoteVideoEnabled, setRemoteVideoEnabled] = useState<boolean>(true);
+  const [incomingCall, setIncomingCall] = useState<MediaConnection | null>(null);
+  const [isCallRinging, setIsCallRinging] = useState<boolean>(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -302,19 +308,22 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       newPeer.on('call', (call) => {
         debugLog(`Incoming call from: ${call.peer}`);
         setRemotePeerId(call.peer);
-
-        if (localStream) {
-          debugLog(`Answering call immediately with stream ID: ${localStream.id}`);
-          answerCall(call);
-        } else {
-          debugLog('No local stream available yet, adding call to pending queue');
-          setConnectionStatus('Getting camera access to answer call...');
-          pendingCalls.current.push(call);
-
-          getUserMedia().catch(err => {
-            console.error(`${DEBUG_PREFIX} Failed to get media for pending call:`, err);
-          });
-        }
+        setIncomingCall(call);
+        setIsCallRinging(true);
+        setConnectionStatus(`Incoming call from ${call.peer}...`);
+        
+        // Set a timeout to automatically reject the call after 30 seconds if not answered
+        const callTimeout = setTimeout(() => {
+          if (isCallRinging) {
+            debugLog('Call not answered within timeout period');
+            setIsCallRinging(false);
+            setIncomingCall(null);
+            setConnectionStatus('Missed call');
+          }
+        }, 30000);
+        
+        // Clear the timeout when component unmounts or call is handled
+        return () => clearTimeout(callTimeout);
       });
 
       newPeer.on('connection', (conn) => {
@@ -508,6 +517,46 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     sendMessageToPeer('stop-visual');
   };
 
+  const acceptCall = async () => {
+    if (!incomingCall) {
+      debugLog('No incoming call to accept');
+      return;
+    }
+    
+    debugLog(`Accepting call from ${incomingCall.peer}`);
+    setIsCallRinging(false);
+    
+    // Ensure we have media access
+    if (!localStream) {
+      try {
+        debugLog('Getting media for incoming call');
+        setConnectionStatus('Getting camera access...');
+        await getUserMedia();
+      } catch (err) {
+        console.error(`${DEBUG_PREFIX} Failed to get media for accepting call:`, err);
+        setConnectionStatus('Failed to access camera/mic');
+        return;
+      }
+    }
+    
+    // Answer the call
+    answerCall(incomingCall);
+    setIncomingCall(null);
+  };
+
+  const rejectCall = () => {
+    if (!incomingCall) {
+      return;
+    }
+    
+    debugLog(`Rejecting call from ${incomingCall.peer}`);
+    // Close the connection
+    incomingCall.close();
+    setIncomingCall(null);
+    setIsCallRinging(false);
+    setConnectionStatus('Call rejected');
+  };
+
   const value = {
     peerId,
     peer,
@@ -527,6 +576,10 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     startAnimation,
     stopAnimation,
     remoteVideoEnabled,
+    isCallRinging,       // Add this
+    incomingCall,        // Add this
+    acceptCall,          // Add this
+    rejectCall           // Add this
   };
 
   return (

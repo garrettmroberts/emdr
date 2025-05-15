@@ -1002,6 +1002,83 @@ input, button, textarea, select {
   }
 }
 
+// Incoming call overlay
+.incomingCallOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.incomingCallModal {
+  background-color: #1e1e1e;
+  border-radius: 12px;
+  padding: 24px;
+  width: 300px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.4s ease;
+  
+  h3 {
+    margin-top: 0;
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+  
+  p {
+    margin-bottom: 24px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+.callActions {
+  display: flex;
+  gap: 16px;
+  
+  button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    
+    svg {
+      font-size: 18px;
+    }
+  }
+  
+  .acceptCallButton {
+    background-color: $color-primary;
+    color: white;
+    
+    &:hover {
+      background-color: darken($color-primary, 10%);
+    }
+  }
+  
+  .rejectCallButton {
+    background-color: #ff3b30;
+    color: white;
+    
+    &:hover {
+      background-color: darken(#ff3b30, 10%);
+    }
+  }
+}
+
 // Animations
 @keyframes fadeIn {
   from { opacity: 0; }
