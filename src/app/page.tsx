@@ -4,7 +4,7 @@ import { usePeer } from "./context/PeerContext";
 import VisualElement from "./components/VisualElement";
 import { useAuth } from "./context/AuthContext";
 import { useEffect, useState } from "react";
-import { FaCopy, FaPlay, FaStop, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
+import { FaCopy, FaPlay, FaStop, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaShieldAlt, FaLaptopMedical, FaBrain, FaRegCommentDots } from 'react-icons/fa';
 import Loader from "./components/Loader";
 import Image from 'next/image';
 import Header from "./components/Header";
@@ -47,70 +47,31 @@ export default function Home() {
   };
 
   // Toggle video stream - modified to notify remote peer
-  const toggleVideo = async () => {
+  const toggleVideo = () => {
     if (localStream) {
-      if (videoEnabled) {
-        // Turn off video: Stop all video tracks to turn off camera light
-        const videoTracks = localStream.getVideoTracks();
-        if (videoTracks.length > 0) {
-          // Store a reference to the first track before stopping it
-          setVideoTrackBackup(videoTracks[0]);
-          
-          // Stop all video tracks (this will turn off the camera light)
-          videoTracks.forEach(track => track.stop());
-          
-          // Remove tracks from the stream
-          videoTracks.forEach(track => localStream.removeTrack(track));
-        }
-        
-        // Notify remote peer that video is disabled
-        sendMessageToPeer('video-disabled');
-        
-      } else {
-        // Turn on video: Recreate video track
-        try {
-          const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-          const newVideoTrack = newStream.getVideoTracks()[0];
-          
-          // Add the new track to the existing stream
-          localStream.addTrack(newVideoTrack);
-          
-          // Notify remote peer that video is enabled
-          sendMessageToPeer('video-enabled');
-          
-        } catch (err) {
-          console.error("Failed to restart camera:", err);
-        }
-      }
+      const videoTracks = localStream.getVideoTracks();
+      
+      videoTracks.forEach(track => {
+        // Simply toggle the enabled property
+        track.enabled = !videoEnabled;
+      });
+      
+      // Notify the peer about the video state
+      sendMessageToPeer(videoEnabled ? 'video-disabled' : 'video-enabled');
+      
       setVideoEnabled(!videoEnabled);
     }
   };
 
-  // Toggle audio stream - modified to properly stop microphone hardware
-  const toggleAudio = async () => {
+  // Toggle audio stream
+  const toggleAudio = () => {
     if (localStream) {
-      if (audioEnabled) {
-        // Turn off audio: Stop all audio tracks to release microphone hardware
-        const audioTracks = localStream.getAudioTracks();
-        if (audioTracks.length > 0) {
-          // Stop all audio tracks (this will release the microphone hardware)
-          audioTracks.forEach(track => track.stop());
-          
-          // Remove tracks from the stream
-          audioTracks.forEach(track => localStream.removeTrack(track));
-        }
-      } else {
-        // Turn on audio: Recreate audio track
-        try {
-          const newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          const newAudioTrack = newStream.getAudioTracks()[0];
-          
-          // Add the new track to the existing stream
-          localStream.addTrack(newAudioTrack);
-        } catch (err) {
-          console.error("Failed to restart microphone:", err);
-        }
-      }
+      const audioTracks = localStream.getAudioTracks();
+      
+      audioTracks.forEach(track => {
+        track.enabled = !audioEnabled;
+      });
+      
       setAudioEnabled(!audioEnabled);
     }
   };
