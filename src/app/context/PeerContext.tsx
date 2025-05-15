@@ -60,10 +60,6 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const pendingCalls = useRef<Array<MediaConnection>>([]);
   const dataConnections = useRef<Map<string, DataConnection>>(new Map());
 
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const MAX_RECONNECT_ATTEMPTS = 3;
-  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
     debugLog(`Setting up peer ID: ${user?.email ? 'Using email' : 'Using random ID'}`);
     if (user?.email) {
@@ -262,32 +258,36 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const createPeer = (peerId: string) => {
+  const createPeer = async (peerId: string) => {
     debugLog(`Creating peer with ID: ${peerId}`);
+    
+    // Default ICE servers as fallback
+    let iceServers = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.google.com:19302' },
+    ];
+    
+    try {
+      // Fetch Twilio TURN credentials
+      const response = await fetch('/api/twilio-token');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.iceServers) {
+          debugLog('Using Twilio ICE servers');
+          iceServers = data.iceServers;
+        }
+      } else {
+        console.error(`${DEBUG_PREFIX} Failed to get Twilio servers:`, await response.text());
+      }
+    } catch (err) {
+      console.error(`${DEBUG_PREFIX} Error fetching Twilio credentials:`, err);
+      debugLog('Falling back to public STUN servers');
+    }
     
     const config = {
       config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.google.com:19302' },
-          {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-          {
-            urls: 'turn:openrelay.metered.ca:443',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-          {
-            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          }
-        ],
+        iceServers,
         iceCandidatePoolSize: 10,
-        iceTransportPolicy: 'relay',
       },
       debug: 3
     };
@@ -344,29 +344,6 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setPeer(newPeer);
   };
 
-  const attemptReconnection = () => {
-    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && remotePeerId) {
-      debugLog(`Connection failed, attempting reconnection ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}`);
-      setReconnectAttempts(prev => prev + 1);
-      
-      // Clear any existing timers
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-      }
-      
-      // Disconnect existing call
-      disconnectCall();
-      
-      // Wait before reconnecting
-      reconnectTimerRef.current = setTimeout(() => {
-        debugLog(`Reconnecting to: ${remotePeerId}`);
-        connectToPeer(remotePeerId);
-      }, 2000);
-    } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      setConnectionStatus(`Connection failed after ${MAX_RECONNECT_ATTEMPTS} attempts`);
-    }
-  };
-
   const answerCall = (call: MediaConnection) => {
     debugLog(`Answering call from ${call.peer}`);
     if (!localStream) {
@@ -416,68 +393,62 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Create optimized stream with lower bitrate for better reliability
     const optimizedStream = new MediaStream();
     
-    // Add video track with constraints
-    if (localStream.getVideoTracks().length > 0) {
-      const videoTrack = localStream.getVideoTracks()[0];
-      if (videoTrack.getConstraints) {
-        debugLog('Original video constraints:', videoTrack.getConstraints());
-      }
-      
-      try {
-        // Apply constraints to reduce quality for better transmission
-        videoTrack.applyConstraints({
-          width: { ideal: 320, max: 640 },
-          height: { ideal: 240, max: 480 },
-          frameRate: { max: 15 }
-        }).catch(e => debugLog('Could not apply video constraints:', e));
-      } catch (err) {
-        debugLog('Error applying constraints:', err);
-      }
-      
-      optimizedStream.addTrack(videoTrack);
-    }
+    // Add tracks from the localStream to the optimizedStream
+    localStream.getTracks().forEach(track => {
+      debugLog(`Adding track to optimized stream: ${track.kind}, enabled=${track.enabled}`);
+      optimizedStream.addTrack(track);
+    });
     
-    // Add audio track with reduced quality
-    if (localStream.getAudioTracks().length > 0) {
-      optimizedStream.addTrack(localStream.getAudioTracks()[0]);
-    }
+    debugLog(`Calling with optimized stream ID: ${optimizedStream.id}, tracks: video=${optimizedStream.getVideoTracks().length}, audio=${optimizedStream.getAudioTracks().length}`);
     
-    debugLog(`Calling with optimized stream ID: ${optimizedStream.id}`);
-    debugLog(`Optimized stream tracks: video=${optimizedStream.getVideoTracks().length}, audio=${optimizedStream.getAudioTracks().length}`);
-    
-    // Force TURN relay with call options
-    const callOptions = {
-      sdpTransform: (sdp: string) => {
-        // Force usage of relay ICE candidates by removing host and srflx candidates
-        debugLog('Transforming SDP to force TURN relay');
-        return sdp.replace(/a=candidate.*typ host.*\r\n/g, '')
-                 .replace(/a=candidate.*typ srflx.*\r\n/g, '');
-      }
-    };
-    
-    const call = peer.call(remotePeerId, optimizedStream, callOptions);
+    const call = peer.call(remotePeerId, optimizedStream);
     activeCalls.current.set(remotePeerId, call);
     
+    // Add ICE candidate monitoring
+    if (call.peerConnection) {
+      // Log ICE candidate types to help diagnose connection issues
+      const candidateCounter = { host: 0, srflx: 0, relay: 0 };
+      
+      call.peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          const candidateType = event.candidate.candidate.split(' ')[7];
+          if (candidateType in candidateCounter) {
+            candidateCounter[candidateType as keyof typeof candidateCounter]++;
+          }
+          if (candidateType in candidateCounter) {
+            debugLog(`ICE candidate generated: ${candidateType} (${candidateCounter[candidateType as keyof typeof candidateCounter]})`);
+          } else {
+            debugLog(`ICE candidate generated: ${candidateType} (unknown type)`);
+          }
+        }
+      };
+      
+      call.peerConnection.onicegatheringstatechange = () => {
+        if (call.peerConnection.iceGatheringState === 'complete') {
+          debugLog('ICE gathering complete. Candidates collected:', candidateCounter);
+          
+          if (candidateCounter.relay === 0) {
+            debugLog('WARNING: No relay candidates collected - TURN servers may not be working');
+          }
+        }
+      };
+      
+      // Monitor connection state
+      call.peerConnection.onconnectionstatechange = () => {
+        debugLog(`Connection state changed: ${call.peerConnection.connectionState}`);
+      };
+    }
+    
+    // Handle the incoming stream
     call.on('stream', (incomingStream) => {
-      debugLog(`Got remote stream from call: ${incomingStream.id}`);
-      debugLog(`Remote stream has video: ${incomingStream.getVideoTracks().length > 0}`);
+      debugLog(`Received remote stream ID: ${incomingStream.id}`);
+      debugLog(`Remote stream tracks: video=${incomingStream.getVideoTracks().length}, audio=${incomingStream.getAudioTracks().length}`);
       setRemoteStream(incomingStream);
       setIsConnected(true);
-      setConnectionStatus(`Connected to ${remotePeerId}`);
-      
-      // Reset reconnection counter when we get a stream
-      setReconnectAttempts(0);
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-      }
+      setConnectionStatus(`Connected to ${call.peer}`);
     });
-
-    call.on('error', (err) => {
-      console.error(`${DEBUG_PREFIX} Call error:`, err);
-      debugLog(`Call error type: ${typeof err === 'object' ? JSON.stringify(err) : err}`);
-      setConnectionStatus(`Call error: ${err}`);
-    });
-
+    
+    // Handle call closing
     call.on('close', () => {
       debugLog(`Call to ${remotePeerId} closed`);
       setIsConnected(false);
@@ -485,53 +456,12 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setConnectionStatus('Call ended');
       activeCalls.current.delete(remotePeerId);
     });
-
-    if (call.peerConnection) {
-      debugLog('Setting up detailed ICE monitoring');
-      
-      // Monitor ICE gathering state
-      call.peerConnection.onicegatheringstatechange = () => {
-        debugLog(`ICE gathering state: ${call.peerConnection.iceGatheringState}`);
-      };
-      
-      // Monitor ICE connection state
-      call.peerConnection.oniceconnectionstatechange = () => {
-        const state = call.peerConnection.iceConnectionState;
-        debugLog(`ICE connection state: ${state}`);
-        
-        if (state === 'failed' || state === 'disconnected') {
-          // Try to restart ICE connection
-          try {
-            call.peerConnection.restartIce?.();
-            
-            // If we're completely failed, try a full reconnection
-            if (state === 'failed') {
-              attemptReconnection();
-            }
-          } catch (err) {
-            console.error(`${DEBUG_PREFIX} ICE restart error:`, err);
-            attemptReconnection();
-          }
-        }
-        
-        // Reset reconnection counter on successful connection
-        if (state === 'connected' || state === 'completed') {
-          setReconnectAttempts(0);
-        }
-      };
-      
-      // Monitor connection state
-      call.peerConnection.onconnectionstatechange = () => {
-        debugLog(`Connection state: ${call.peerConnection.connectionState}`);
-      };
-      
-      // Log individual ICE candidates
-      call.peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          debugLog(`ICE candidate: ${event.candidate.candidate.split(' ')[7]}`);
-        }
-      };
-    }
+    
+    // Handle call errors
+    call.on('error', (err) => {
+      console.error(`${DEBUG_PREFIX} Call error:`, err);
+      setConnectionStatus(`Call error: ${err}`);
+    });
   };
 
   const disconnectCall = () => {
