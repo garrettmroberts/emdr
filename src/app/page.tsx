@@ -76,10 +76,23 @@ export default function Home() {
     }
   };
 
-  // Function to toggle visual element
+  // Function to toggle visual element with auto turn-off after 20 seconds
   const toggleVisual = () => {
-    setVisualActive(!visualActive);
-    sendMessageToPeer(!visualActive ? 'start-visual' : 'stop-visual');
+    // Only proceed if turning animation ON
+    if (!visualActive) {
+      setVisualActive(true);
+      sendMessageToPeer('start-visual');
+      
+      // Auto turn off after 20 seconds
+      setTimeout(() => {
+        setVisualActive(false);
+        sendMessageToPeer('stop-visual');
+      }, 20000);
+    } else {
+      // Manual turn off
+      setVisualActive(false);
+      sendMessageToPeer('stop-visual');
+    }
   };
 
   const openControlPanel = () => {

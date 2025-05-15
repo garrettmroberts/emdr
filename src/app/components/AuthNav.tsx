@@ -2,9 +2,11 @@
 
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
+import { usePeer } from '../context/PeerContext';
 
 export default function AuthNav() {
   const { user, userRole, signOut } = useAuth();
+  const { peerId } = usePeer();
   
   return (
     <div className="authNav">
@@ -14,7 +16,7 @@ export default function AuthNav() {
             {userRole === 'therapist' ? 'Therapist' : 'Client'}
           </span>
           <span className="userName">
-            {user.email}
+            {peerId}
           </span>
           <Link href="/profile" className="profileLink">
             Profile

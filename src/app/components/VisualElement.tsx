@@ -13,22 +13,21 @@ const VisualElement: React.FC<VisualElementProps> = ({
   isActive = false,
   peerControlled = false
 }) => {
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { animationActive } = usePeer();
   
   // Determine if the ball should be active based on who controls it
   const showBall = peerControlled ? animationActive : isActive;
+
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Set up and clean up timers
+  // Just handle the countdown display, let parent control overall visibility
   useEffect(() => {
     if (showBall) {
       // Start with 20 seconds
       setTimeLeft(20);
       
-      // Clear any existing timers
-      if (timerRef.current) clearTimeout(timerRef.current);
+      // Clear any existing timer
       if (intervalRef.current) clearInterval(intervalRef.current);
       
       // Set up the countdown timer
@@ -38,22 +37,17 @@ const VisualElement: React.FC<VisualElementProps> = ({
           return null;
         });
       }, 1000);
-      
-      // Set timer to auto-stop after 20 seconds
-      timerRef.current = setTimeout(() => {
-        setTimeLeft(null);
-        if (intervalRef.current) clearInterval(intervalRef.current);
-      }, 20000);
     } else {
       // Clean up if ball is hidden
       setTimeLeft(null);
-      if (timerRef.current) clearTimeout(timerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
+
+
+    console.log('showBall:', showBall);
     
     // Cleanup on unmount
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [showBall]);

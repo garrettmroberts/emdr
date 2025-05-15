@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react';
 import Peer, { MediaConnection, DataConnection } from 'peerjs';
+import { useAuth } from './AuthContext';
 
 interface PeerContextType {
   peerId: string | null;
@@ -35,6 +36,7 @@ export const usePeer = () => {
 };
 
 export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth(); // Add this line to get the current user
   const [peerId, setPeerId] = useState<string | null>(null);
   const [peer, setPeer] = useState<Peer | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -52,10 +54,19 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const dataConnections = useRef<Map<string, DataConnection>>(new Map());
 
   useEffect(() => {
-    const peerId = Math.random().toString(36).substring(2, 10);
-    setPeerId(peerId);
-  }, []);
+    // Use email as peerId if available, otherwise generate random ID
+    if (user?.email) {
+      // Use email but replace special characters that aren't allowed in peer IDs
+      const sanitizedEmail = user.email.replace(/[^a-zA-Z0-9]/g, '-');
+      setPeerId(sanitizedEmail);
+    } else {
+      // Fallback to random ID if no email is available
+      const randomId = Math.random().toString(36).substring(2, 10);
+      setPeerId(randomId);
+    }
+  }, [user]); // Depend on user so it updates when user changes
 
+  // This effect should start running when peerId is set
   useEffect(() => {
     if (peerId) {
       getUserMedia().then(() => {
@@ -144,23 +155,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const setupDataConnectionListeners = (conn: DataConnection) => {
     conn.on('data', (data) => {
       console.log('Received data:', data);
-      
-      // Handle animation control messages
-      if (typeof data === 'string') {
-        if (data.includes('start-animation')) {
-          console.log('Received animation start command');
-          setAnimationActive(true);
-        } else if (data.includes('stop-animation')) {
-          console.log('Received animation stop command');
-          setAnimationActive(false);
-        } else if (data === 'video-disabled') {
-          console.log('Remote peer disabled video');
-          setRemoteVideoEnabled(false);
-        } else if (data === 'video-enabled') {
-          console.log('Remote peer enabled video');
-          setRemoteVideoEnabled(true);
-        }
-      }
+      handleDataMessage(data);
     });
     
     conn.on('close', () => {
@@ -173,6 +168,37 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     
     dataConnections.current.set(conn.peer, conn);
+  };
+
+  const setupDataChannel = (conn: DataConnection) => {
+    conn.on('data', (data) => {
+      handleDataMessage(data as string);
+    });
+  };
+
+  const handleDataMessage = (data: string) => {
+    console.log('Message received:', data);
+    
+    // Handle visual control messages
+    if (data === 'start-visual') {
+      console.log('Starting visual animation');
+      setAnimationActive(true);
+      
+      // Auto turn off after 20 seconds to stay in sync
+      setTimeout(() => {
+        setAnimationActive(false);
+      }, 20000);
+    } 
+    else if (data === 'stop-visual') {
+      setAnimationActive(false);
+    }
+    // Handle other message types (video enabled/disabled, etc.)
+    else if (data === 'video-disabled') {
+      setRemoteVideoEnabled(false);
+    }
+    else if (data === 'video-enabled') {
+      setRemoteVideoEnabled(true);
+    }
   };
 
   const getOrCreateDataConnection = (peerId: string): DataConnection | null => {
@@ -249,6 +275,9 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       newPeer.on('call', (call) => {
         console.log('Incoming call from:', call.peer);
         
+        // Set remotePeerId when call is received
+        setRemotePeerId(call.peer);
+        
         if (localStream) {
           answerCall(call);
         } else {
@@ -263,6 +292,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       newPeer.on('connection', (conn) => {
         console.log('Incoming data connection from:', conn.peer);
         setupDataConnectionListeners(conn);
+        setupDataChannel(conn);
       });
     });
 
@@ -285,6 +315,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     setConnectionStatus(`Answering call from ${call.peer}...`);
+    setRemotePeerId(call.peer); // Ensure remotePeerId is set here too
     
     activeCalls.current.set(call.peer, call);
     
@@ -360,17 +391,23 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const connectToPeer = (id: string = remotePeerId) => {
     if (id) {
       callPeer(id);
+      const conn = peer?.connect(id);
+      if (conn) {
+        conn.on('open', () => {
+          setupDataChannel(conn);
+        });
+      }
     }
   };
 
   const startAnimation = () => {
     setAnimationActive(true);
-    sendMessageToPeer('start-animation');
+    sendMessageToPeer('start-visual');
   };
-
+  
   const stopAnimation = () => {
     setAnimationActive(false);
-    sendMessageToPeer('stop-animation');
+    sendMessageToPeer('stop-visual');
   };
 
   const value = {
