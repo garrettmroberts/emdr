@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSupabase } from '../hooks/useSupabase';
 import { useRouter } from 'next/navigation';
-import styles from './profile.module.css';
 
 export default function ProfilePage() {
   const { user, userRole, isLoading } = useAuth();

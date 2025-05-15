@@ -1,0 +1,12 @@
+@import 'base/reset';
+@import 'base/globals';
+
+@import 'utils/variables';
+
+@import 'components/loader';
+@import 'components/userProfile';
+@import 'components/visualComponent';
+@import 'components/header';
+@import 'components/auth';
+
+@import 'pages/main';

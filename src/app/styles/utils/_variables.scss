@@ -1,0 +1,65 @@
+// Colors
+$color-black: #000000;
+$color-background-dark: #222222;
+$color-primary: #169976;
+$color-secondary: #1DCD9F;
+$color-white: #ffffff;
+$color-accent: #FF6B6B;
+
+// Fonts
+$font-primary: "Space Mono", monospace;
+$font-mono: "JetBrains Mono", Consolas, Monaco, monospace;
+
+// Font Sizes
+$font-size-base: 16px;
+$font-size-small: 14px;
+$font-size-large: 18px;
+$font-size-h1: 2.5rem;   // 40px
+$font-size-h2: 2rem;     // 32px
+$font-size-h3: 1.5rem;   // 24px
+$font-size-h4: 1.25rem;  // 20px
+$font-size-h5: 1.125rem; // 18px
+$font-size-h6: 1rem;     // 16px
+
+// Line Heights
+$line-height-base: 1.5;
+$line-height-heading: 1.2;
+$line-height-paragraph: 1.6;
+
+// Breakpoints
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;
+
+// Typography
+$font-sans: Arial, Helvetica, sans-serif;
+
+// Spacing
+$spacing-xs: 5px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 20px;
+$spacing-xl: 30px;
+
+// Border Radius
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 10px;
+
+// Shadows
+$shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+// Transitions
+$transition-default: all 0.3s;
+
+// CSS Variables
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  
+  @media (prefers-color-scheme: dark) {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import styles from './VisualElement.module.css';
 import { usePeer } from '../context/PeerContext';
 
 interface VisualElementProps {
@@ -144,16 +143,16 @@ const VisualElement: React.FC<VisualElementProps> = ({
 
   return (
     <>
-      <div className={styles.container}>
+      <div className="container">
         {isAnimating && (
           <div 
-            className={[styles.circle, isAnimating ? styles.animate : ''].join(' ')} 
+            className={["circle", isAnimating ? "animate" : ''].join(' ')} 
             style={circleStyle} 
           />
         )}
       </div>
-      <div className={styles.controlContainer}>
-        <button className={styles.button} onClick={handleClick}>
+      <div className="controlContainer">
+        <button className="button" onClick={handleClick}>
           {isAnimating ? `Stop (${timeRemaining ?? 20}s)` : 'Start Animation (20s)'}
         </button>
       </div>

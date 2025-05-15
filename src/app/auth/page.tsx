@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import styles from './auth.module.css';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -31,14 +30,14 @@ export default function AuthPage() {
   };
 
   return (
-    <div className={styles.authContainer}>
-      <div className={styles.authForm}>
+    <div className="authContainer">
+      <div className="authForm">
         <h1>{isLogin ? 'Login' : 'Sign Up'}</h1>
         
-        {error && <div className={styles.error}>{error}</div>}
+        {error && <div className="error">{error}</div>}
         
         <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}>
+          <div className="formGroup">
             <label htmlFor="email">Email</label>
             <input
               id="email"
@@ -49,7 +48,7 @@ export default function AuthPage() {
             />
           </div>
           
-          <div className={styles.formGroup}>
+          <div className="formGroup">
             <label htmlFor="password">Password</label>
             <input
               id="password"
@@ -62,10 +61,10 @@ export default function AuthPage() {
           
           {/* Only show role selection during signup */}
           {!isLogin && (
-            <div className={styles.formGroup}>
-              <label className={styles.roleLabel}>I am a:</label>
-              <div className={styles.roleOptions}>
-                <label className={styles.roleOption}>
+            <div className="formGroup">
+              <label className="roleLabel">I am a:</label>
+              <div className="roleOptions">
+                <label className="roleOption">
                   <input
                     type="radio"
                     name="role"
@@ -76,7 +75,7 @@ export default function AuthPage() {
                   <span>Client</span>
                 </label>
                 
-                <label className={styles.roleOption}>
+                <label className="roleOption">
                   <input
                     type="radio"
                     name="role"
@@ -93,13 +92,13 @@ export default function AuthPage() {
           <button 
             type="submit" 
             disabled={isLoading}
-            className={styles.submitButton}
+            className="submitButton"
           >
             {isLoading ? 'Processing...' : isLogin ? 'Login' : 'Sign Up'}
           </button>
         </form>
         
-        <div className={styles.switchMode}>
+        <div className="switchMode">
           {isLogin ? (
             <p>
               Don't have an account?{' '}

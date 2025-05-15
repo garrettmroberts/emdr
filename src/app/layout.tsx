@@ -1,7 +1,7 @@
-import './globals.css';
 import { Inter } from 'next/font/google';
 import { PeerProvider } from './context/PeerContext';
 import { AuthProvider } from './context/AuthContext';
+import './styles/main.scss';
 
 const inter = Inter({ subsets: ['latin'] });
 
