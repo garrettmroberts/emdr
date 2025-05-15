@@ -264,23 +264,29 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const config = {
       config: {
         iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.google.com:19302' },
           {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
+            urls: "stun:stun.relay.metered.ca:80",
           },
           {
-            urls: 'turn:openrelay.metered.ca:443',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
+            urls: "turn:standard.relay.metered.ca:80",
+            username: "e0b8ed8486864ada6306d24c",
+            credential: "LkaWhN5JgNLTp4tm",
           },
           {
-            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          }
+            urls: "turn:standard.relay.metered.ca:80?transport=tcp",
+            username: "e0b8ed8486864ada6306d24c",
+            credential: "LkaWhN5JgNLTp4tm",
+          },
+          {
+            urls: "turn:standard.relay.metered.ca:443",
+            username: "e0b8ed8486864ada6306d24c",
+            credential: "LkaWhN5JgNLTp4tm",
+          },
+          {
+            urls: "turns:standard.relay.metered.ca:443?transport=tcp",
+            username: "e0b8ed8486864ada6306d24c",
+            credential: "LkaWhN5JgNLTp4tm",
+          },
         ],
         iceCandidatePoolSize: 10,
       },
