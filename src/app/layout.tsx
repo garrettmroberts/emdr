@@ -1,11 +1,12 @@
-import './globals.css';
 import { Inter } from 'next/font/google';
 import { PeerProvider } from './context/PeerContext';
+import { AuthProvider } from './context/AuthContext';
+import './styles/main.scss';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'EMDR Video Chat',
+  title: 'TapiocaEMDR',
   description: 'EMDR therapy video chat client',
 };
 
@@ -16,13 +17,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/icon.png" sizes="any" />
-      </head>
       <body className={inter.className}>
-        <PeerProvider>
-          {children}
-        </PeerProvider>
+        <AuthProvider>
+          <PeerProvider>
+            {children}
+          </PeerProvider>
+        </AuthProvider>
       </body>
     </html>
   );
