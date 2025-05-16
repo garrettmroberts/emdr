@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import twilio from "twilio";
 
 // Twilio Account SID and Auth Token should be in environment variables
-const accountSid = process.env.NEXT_PUBLIC_TWILIO_ACCOUNT_SID;
-const authToken = process.env.NEXT_PUBLIC_TWILIO_AUTH_TOKEN;
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
 
 export async function GET() {
   try {

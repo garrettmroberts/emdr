@@ -30,10 +30,10 @@ interface PeerContextType {
   startAnimation: () => void;
   stopAnimation: () => void;
   remoteVideoEnabled: boolean;
-  isCallRinging: boolean;  // Add this
-  incomingCall: MediaConnection | null;  // Add this
-  acceptCall: () => void;  // Add this
-  rejectCall: () => void;  // Add this
+  isCallRinging: boolean;
+  incomingCall: MediaConnection | null;
+  acceptCall: () => void;
+  rejectCall: () => void;
 }
 
 const PeerContext = createContext<PeerContextType | null>(null);
