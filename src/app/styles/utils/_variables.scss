@@ -52,14 +52,3 @@ $shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
 
 // Transitions
 $transition-default: all 0.3s;
-
-// CSS Variables
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  
-  @media (prefers-color-scheme: dark) {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}

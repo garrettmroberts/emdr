@@ -22,21 +22,8 @@
   position: relative;
   overflow: visible;
   z-index: 1; // Update to handle the fixed positioning of video
-}
 
-// Landing page specific styles
-.hero {
-  position: relative;
-  min-height: calc(100vh - 75px); // Precisely account for the header height
-  max-height: none; // Remove any max height constraints
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  overflow: hidden;
-  box-sizing: border-box; // Ensure padding is included in the height calc
-  margin-top: 0; // Remove any top margin that could push content up
-
+  // Landing page background container
   &::before {
     content: '';
     position: absolute;
@@ -52,7 +39,7 @@
     content: '';
     position: absolute;
     width: 150%;
-    height: 150%;
+    height: 100%;
     top: -25%;
     left: -25%;
     background: radial-gradient(circle, rgba($color-primary, 0.15) 0%, transparent 70%);
@@ -61,179 +48,23 @@
   }
 }
 
-.heroContent {
-  max-width: 1100px;
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 60px;
-  padding: 0; // Remove padding that might cause overflow
-  
-  @media (max-width: 900px) {
-    flex-direction: column;
-    gap: 40px;
-  }
-}
-
-.heroText {
-  flex: 1;
-
-  h1 {
-    font-size: 3.5rem;
-    line-height: 1.1;
-    margin-bottom: 24px;
-    font-weight: 700;
-    background: linear-gradient(90deg, #1DCD9F, #169976);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-
-    @media (max-width: 768px) {
-      font-size: 2.5rem;
-    }
-  }
-
-  p {
-    font-size: 1.25rem;
-    line-height: 1.6;
-    color: rgba($color-white, 0.9);
-    margin-bottom: 32px;
-    max-width: 540px;
-  }
-}
-
-.heroVisual {
-  flex: 1;
-  position: relative;
-  min-height: 400px;
-  
-  @media (max-width: 900px) {
-    width: 100%;
-    min-height: 300px;
-  }
-}
-
-.heroImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  animation: floatAnimation 6s ease-in-out infinite;
-}
-
-.circle {
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.8;
-  filter: blur(40px);
-  z-index: -1;
-  
-  &.circle1 {
-    width: 200px;
-    height: 200px;
-    background: rgba($color-primary, 0.3);
-    top: -40px;
-    left: -40px;
-    animation: moveCircle1 10s ease-in-out infinite alternate;
-  }
-  
-  &.circle2 {
-    width: 300px;
-    height: 300px;
-    background: rgba($color-secondary, 0.2);
-    bottom: -60px;
-    right: -60px;
-    animation: moveCircle2 15s ease-in-out infinite alternate;
-  }
-}
-
-// Features section
-.featuresSection {
-  padding: 100px 20px;
-  background-color: lighten($color-background-dark, 3%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  box-sizing: border-box; // Include padding in width calculation
-}
-
-.sectionTitle {
-  text-align: center;
-  margin-bottom: 60px;
-  
-  h2 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 16px;
-    color: $color-white;
-    
-    @media (max-width: 768px) {
-      font-size: 2rem;
-    }
-  }
-  
-  p {
-    font-size: 1.2rem;
-    color: rgba($color-white, 0.7);
-    max-width: 600px;
-    margin: 0 auto;
-  }
-}
-
-.featuresGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 40px;
-  max-width: 1200px;
-  width: 100%;
-}
-
-.featureCard {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 30px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  
-  &:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  }
-  
-  .featureIcon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 70px;
-    height: 70px;
-    border-radius: 20px;
-    margin-bottom: 24px;
-    background: linear-gradient(135deg, rgba($color-primary, 0.7), rgba($color-secondary, 0.7));
-    color: $color-white;
-    font-size: 2rem;
-  }
-  
-  h3 {
-    font-size: 1.4rem;
-    margin-bottom: 16px;
-    color: $color-white;
-  }
-  
-  p {
-    color: rgba($color-white, 0.7);
-    line-height: 1.5;
-    font-size: 1rem;
-  }
-}
-
 // CTA section
 .ctaSection {
   padding: 80px 20px;
   text-align: center;
-  background: linear-gradient(135deg, rgba($color-primary, 0.1), rgba($color-secondary, 0.1));
+  position: relative;
   width: 100%;
-  box-sizing: border-box; // Include padding in width calculation
+  box-sizing: border-box;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba($color-primary, 0.3), transparent);
+  }
   
   h2 {
     font-size: 2.5rem;
@@ -305,27 +136,19 @@
   padding: 30px 40px;
   text-align: center;
   background-color: darken($color-background-dark, 2%);
-  position: relative; // Ensure it's in the flow
+  position: relative;
   width: 100%;
-  padding-bottom: calc(30px + 70px); // Add extra padding to account for the control bar
+  margin-bottom: 0;
+  box-sizing: border-box;
   
   p {
     color: rgba($color-white, 0.6);
     font-size: 0.95rem;
-    margin: 0; // Remove default margins
+    margin: 0;
   }
 }
 
 // Animations
-@keyframes floatAnimation {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
-}
-
 @keyframes pulseBackground {
   0%, 100% {
     opacity: 0.5;

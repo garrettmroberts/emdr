@@ -10,6 +10,9 @@ import Image from 'next/image';
 import Header from "./components/Header";
 import MediaControlBar from "./components/MediaControlBar";
 import Toast from './components/Toast';
+import Hero from './components/Hero';
+import CTA from './components/CTA';
+import Features from './components/Features';
 
 export default function Home() {
   const { 
@@ -128,101 +131,20 @@ export default function Home() {
         <Header />
         
         <main className="main">
-        <Toast 
-          message="Please check your email for a verification link to complete your registration."
-          visible={justSignedUp}
-          onClose={() => setJustSignedUp(false)}
-        />
-          {/* Hero Section */}
-          <section className="hero">
-            <div className="heroContent">
-              <div className="heroText">
-                <h1>Transform Your Therapy Practice with Online EMDR</h1>
-                <p>
-                  Provide effective EMDR therapy online through secure video sessions,
-                  bilateral stimulation tools, and an intuitive platform designed for therapists and clients.
-                </p>
-                <a href="/auth" className="loginButton">
-                  <span className="highlight">Get Started</span> with Tapioca EMDR
-                </a>
-              </div>
-              <div className="heroVisual">
-                <div className="circle circle1"></div>
-                <div className="circle circle2"></div>
-                <Image 
-                  src="/emdr-therapy-illustration.png" 
-                  alt="EMDR Therapy Illustration"
-                  className="heroImage"
-                  width={500} 
-                  height={300} 
-                  onError={(e) => {
-                    const target = e.currentTarget as HTMLImageElement;
-                    target.style.display = 'none';
-                    if (target.parentElement) {
-                      target.parentElement.style.background = 'linear-gradient(135deg, rgba(29,205,159,0.2), rgba(22,153,118,0.2))';
-                      target.parentElement.style.borderRadius = '16px';
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </section>
+          <Toast 
+            message="Please check your email for a verification link to complete your registration."
+            visible={justSignedUp}
+            onClose={() => setJustSignedUp(false)}
+          />
           
-          {/* Features Section */}
-          <section className="featuresSection">
-            <div className="sectionTitle">
-              <h2>Why Choose Tapioca EMDR?</h2>
-              <p>Our platform combines security, simplicity, and clinical effectiveness</p>
-            </div>
-            
-            <div className="featuresGrid">
-              <div className="featureCard">
-                <div className="featureIcon">
-                  <FaShieldAlt />
-                </div>
-                <h3>Secure & Private</h3>
-                <p>End-to-end encrypted video sessions ensure your therapy remains confidential and HIPAA-compliant.</p>
-              </div>
-              
-              <div className="featureCard">
-                <div className="featureIcon">
-                  <FaLaptopMedical />
-                </div>
-                <h3>Specialized for EMDR</h3>
-                <p>Custom-built bilateral stimulation tools designed specifically for online EMDR therapy.</p>
-              </div>
-              
-              <div className="featureCard">
-                <div className="featureIcon">
-                  <FaBrain />
-                </div>
-                <h3>Evidence-Based</h3>
-                <p>Built on research supporting the effectiveness of online EMDR therapy for trauma processing.</p>
-              </div>
-              
-              <div className="featureCard">
-                <div className="featureIcon">
-                  <FaRegCommentDots />
-                </div>
-                <h3>Easy Communication</h3>
-                <p>Simple interface for both therapists and clients with no software downloads required.</p>
-              </div>
-            </div>
-          </section>
+          <Hero />
+          <Features />
+          <CTA />
           
-          {/* CTA Section */}
-          <section className="ctaSection">
-            <h2>Ready to Elevate Your Therapy Practice?</h2>
-            <p>Join therapists worldwide who are expanding their reach and improving outcomes with Tapioca EMDR</p>
-            <a href="/auth" className="loginButton">
-              Start Your Journey Today
-            </a>
-          </section>
+          <footer className="footer">
+            <p>TapiocaEMDR • Secure and confidential • {new Date().getFullYear()} • Made with ❤ in Boulder, CO</p>
+          </footer>
         </main>
-        
-        <footer className="footer">
-          <p>TapiocaEMDR • Secure and confidential • {new Date().getFullYear()} • Made with ❤ in Boulder, CO</p>
-        </footer>
       </div>
     );
   }

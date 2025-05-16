@@ -1,7 +1,7 @@
 const Loader = () => {
     return (
-        <div className="preloader">
-            <div className="loader"></div>
+        <div className="loader">
+            <div className="loader__spinner"></div>
         </div>
     )
 }
