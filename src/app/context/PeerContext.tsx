@@ -133,11 +133,29 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [localStream]);
 
   const getUserMedia = async () => {
-    debugLog('Requesting user media...');
+    debugLog('Requesting user media with enhanced quality...');
     try {
       debugLog('MediaDevices API available:', !!navigator.mediaDevices);
-      const constraints = { video: true, audio: true };
-      debugLog('Using constraints:', constraints);
+      
+      const constraints = { 
+        video: {
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          frameRate: { ideal: 30, min: 15 },
+          facingMode: 'user',
+          aspectRatio: { ideal: 1.7778 }, // 16:9
+        }, 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 2,
+          sampleRate: 48000,
+          sampleSize: 16
+        } 
+      };
+      
+      debugLog('Using enhanced constraints:', constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       debugLog(`Got local stream ID: ${stream.id}`);
       setLocalStream(stream);
