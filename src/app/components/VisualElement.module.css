@@ -8,13 +8,14 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  pointer-events: none; /* Allow clicks to pass through */
+  pointer-events: none;
   z-index: 10;
+  background-color: rgba(0, 0, 0, 0.65); /* Added semi-transparent background */
 }
 
 .ball {
-  width: 60px;
-  height: 60px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   background-color: #1DCD9F;
   box-shadow: 0 0 20px rgba(29, 205, 159, 0.6);
@@ -23,15 +24,15 @@
 }
 
 .moving {
-  animation: moveLeftRight 1.5s ease-in-out infinite alternate;
+  animation: moveLeftRight 0.5s linear infinite alternate;
 }
 
 @keyframes moveLeftRight {
   0% {
-    transform: translateX(-200px);
+    transform: translateX(calc(-50vw + 50px));
   }
   100% {
-    transform: translateX(200px);
+    transform: translateX(calc(50vw - 50px));
   }
 }
 

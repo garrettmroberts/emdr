@@ -17,11 +17,11 @@ const VisualElement: React.FC<VisualElementProps> = ({
   
   // Determine if the ball should be active based on who controls it
   const showBall = peerControlled ? animationActive : isActive;
-
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const ballRef = useRef<HTMLDivElement>(null);
   
-  // Just handle the countdown display, let parent control overall visibility
+  // Timer logic
   useEffect(() => {
     if (showBall) {
       // Start with 20 seconds
@@ -42,9 +42,6 @@ const VisualElement: React.FC<VisualElementProps> = ({
       setTimeLeft(null);
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
-
-
-    console.log('showBall:', showBall);
     
     // Cleanup on unmount
     return () => {
@@ -57,7 +54,10 @@ const VisualElement: React.FC<VisualElementProps> = ({
   
   return (
     <div className={styles.container}>
-      <div className={`${styles.ball} ${styles.moving}`}></div>
+      <div 
+        ref={ballRef} 
+        className={`${styles.ball} ${styles.moving}`}
+      ></div>
       {timeLeft !== null && (
         <div className={styles.timer}>
           {timeLeft} seconds
