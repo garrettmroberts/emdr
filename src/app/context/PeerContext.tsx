@@ -36,7 +36,7 @@ interface PeerContextType {
   rejectCall: () => void;
 }
 
-const PeerContext = createContext<PeerContextType | null>(null);
+export const PeerContext = createContext<PeerContextType | null>(null);
 
 export const usePeer = () => {
   const context = useContext(PeerContext);
@@ -79,16 +79,8 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     if (peerId) {
-      debugLog(`Initializing with peer ID: ${peerId}`);
-      getUserMedia().then((stream) => {
-        debugLog(`Got user media, tracks: ${stream.getTracks().length}`);
-        debugLog(`Video tracks: ${stream.getVideoTracks().length}, audio tracks: ${stream.getAudioTracks().length}`);
-        createPeer(peerId);
-      }).catch(err => {
-        console.error(`${DEBUG_PREFIX} Failed to get user media:`, err);
-        debugLog(`Creating peer without media: ${peerId}`);
-        createPeer(peerId);
-      });
+      debugLog(`Initializing peer with ID: ${peerId}`);
+      createPeer(peerId);
     }
 
     return () => {
@@ -132,7 +124,23 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [localStream]);
 
+  // Request camera access immediately after login
+  useEffect(() => {
+    if (user && !localStream) {
+      debugLog('User logged in, requesting camera access');
+      getUserMedia().catch(err => {
+        console.error(`${DEBUG_PREFIX} Initial media access error:`, err);
+        setConnectionStatus(`Camera access error: ${err?.name || err?.message || err}`);
+      });
+    }
+  }, [user]);
+
   const getUserMedia = async () => {
+    // Only request media if user is logged in
+    if (!user) {
+      throw new Error('Must be logged in to access media devices');
+    }
+
     debugLog('Requesting user media with enhanced quality...');
     try {
       debugLog('MediaDevices API available:', !!navigator.mediaDevices);
@@ -159,6 +167,7 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       debugLog(`Got local stream ID: ${stream.id}`);
       setLocalStream(stream);
+      setConnectionStatus('Camera and microphone ready');
       return stream;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -408,87 +417,103 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  const callPeer = (remotePeerId: string) => {
+  const callPeer = async (remotePeerId: string) => {
     debugLog(`Attempting to call peer: ${remotePeerId}`);
-    if (!peer || !localStream) {
-      console.error(`${DEBUG_PREFIX} Cannot call: Peer initialized=${!!peer}, LocalStream=${!!localStream}`);
-      return;
-    }
+    
+    // Get media access when initiating a call
+    try {
+      if (!localStream) {
+        await getUserMedia();
+      }
 
-    setConnectionStatus(`Calling ${remotePeerId}...`);
-    
-    // Create optimized stream with lower bitrate for better reliability
-    const optimizedStream = new MediaStream();
-    
-    // Add tracks from the localStream to the optimizedStream
-    localStream.getTracks().forEach(track => {
-      debugLog(`Adding track to optimized stream: ${track.kind}, enabled=${track.enabled}`);
-      optimizedStream.addTrack(track);
-    });
-    
-    debugLog(`Calling with optimized stream ID: ${optimizedStream.id}, tracks: video=${optimizedStream.getVideoTracks().length}, audio=${optimizedStream.getAudioTracks().length}`);
-    
-    const call = peer.call(remotePeerId, optimizedStream);
-    activeCalls.current.set(remotePeerId, call);
-    
-    // Add ICE candidate monitoring
-    if (call.peerConnection) {
-      // Log ICE candidate types to help diagnose connection issues
-      const candidateCounter = { host: 0, srflx: 0, relay: 0 };
+      if (!peer) {
+        console.error(`${DEBUG_PREFIX} Cannot call: Peer not initialized`);
+        return;
+      }
+
+      if (!localStream) {
+        console.error(`${DEBUG_PREFIX} Failed to get local stream`);
+        return;
+      }
+
+      setConnectionStatus(`Calling ${remotePeerId}...`);
       
-      call.peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          const candidateType = event.candidate.candidate.split(' ')[7];
-          if (candidateType in candidateCounter) {
-            candidateCounter[candidateType as keyof typeof candidateCounter]++;
-          }
-          if (candidateType in candidateCounter) {
-            debugLog(`ICE candidate generated: ${candidateType} (${candidateCounter[candidateType as keyof typeof candidateCounter]})`);
-          } else {
-            debugLog(`ICE candidate generated: ${candidateType} (unknown type)`);
-          }
-        }
-      };
+      // Create optimized stream with lower bitrate for better reliability
+      const optimizedStream = new MediaStream();
       
-      call.peerConnection.onicegatheringstatechange = () => {
-        if (call.peerConnection.iceGatheringState === 'complete') {
-          debugLog('ICE gathering complete. Candidates collected:', candidateCounter);
-          
-          if (candidateCounter.relay === 0) {
-            debugLog('WARNING: No relay candidates collected - TURN servers may not be working');
-          }
-        }
-      };
+      // Add tracks from the localStream to the optimizedStream
+      localStream.getTracks().forEach(track => {
+        debugLog(`Adding track to optimized stream: ${track.kind}, enabled=${track.enabled}`);
+        optimizedStream.addTrack(track);
+      });
       
-      // Monitor connection state
-      call.peerConnection.onconnectionstatechange = () => {
-        debugLog(`Connection state changed: ${call.peerConnection.connectionState}`);
-      };
+      debugLog(`Calling with optimized stream ID: ${optimizedStream.id}, tracks: video=${optimizedStream.getVideoTracks().length}, audio=${optimizedStream.getAudioTracks().length}`);
+      
+      const call = peer.call(remotePeerId, optimizedStream);
+      activeCalls.current.set(remotePeerId, call);
+      
+      // Add ICE candidate monitoring
+      if (call.peerConnection) {
+        // Log ICE candidate types to help diagnose connection issues
+        const candidateCounter = { host: 0, srflx: 0, relay: 0 };
+        
+        call.peerConnection.onicecandidate = (event) => {
+          if (event.candidate) {
+            const candidateType = event.candidate.candidate.split(' ')[7];
+            if (candidateType in candidateCounter) {
+              candidateCounter[candidateType as keyof typeof candidateCounter]++;
+            }
+            if (candidateType in candidateCounter) {
+              debugLog(`ICE candidate generated: ${candidateType} (${candidateCounter[candidateType as keyof typeof candidateCounter]})`);
+            } else {
+              debugLog(`ICE candidate generated: ${candidateType} (unknown type)`);
+            }
+          }
+        };
+        
+        call.peerConnection.onicegatheringstatechange = () => {
+          if (call.peerConnection.iceGatheringState === 'complete') {
+            debugLog('ICE gathering complete. Candidates collected:', candidateCounter);
+            
+            if (candidateCounter.relay === 0) {
+              debugLog('WARNING: No relay candidates collected - TURN servers may not be working');
+            }
+          }
+        };
+        
+        // Monitor connection state
+        call.peerConnection.onconnectionstatechange = () => {
+          debugLog(`Connection state changed: ${call.peerConnection.connectionState}`);
+        };
+      }
+      
+      // Handle the incoming stream
+      call.on('stream', (incomingStream) => {
+        debugLog(`Received remote stream ID: ${incomingStream.id}`);
+        debugLog(`Remote stream tracks: video=${incomingStream.getVideoTracks().length}, audio=${incomingStream.getAudioTracks().length}`);
+        setRemoteStream(incomingStream);
+        setIsConnected(true);
+        setConnectionStatus(`Connected to ${call.peer}`);
+      });
+      
+      // Handle call closing
+      call.on('close', () => {
+        debugLog(`Call to ${remotePeerId} closed`);
+        setIsConnected(false);
+        setRemoteStream(null);
+        setConnectionStatus('Call ended');
+        activeCalls.current.delete(remotePeerId);
+      });
+      
+      // Handle call errors
+      call.on('error', (err) => {
+        console.error(`${DEBUG_PREFIX} Call error:`, err);
+        setConnectionStatus(`Call error: ${err}`);
+      });
+    } catch (err) {
+      console.error(`${DEBUG_PREFIX} Error in callPeer:`, err);
+      setConnectionStatus('Failed to establish call');
     }
-    
-    // Handle the incoming stream
-    call.on('stream', (incomingStream) => {
-      debugLog(`Received remote stream ID: ${incomingStream.id}`);
-      debugLog(`Remote stream tracks: video=${incomingStream.getVideoTracks().length}, audio=${incomingStream.getAudioTracks().length}`);
-      setRemoteStream(incomingStream);
-      setIsConnected(true);
-      setConnectionStatus(`Connected to ${call.peer}`);
-    });
-    
-    // Handle call closing
-    call.on('close', () => {
-      debugLog(`Call to ${remotePeerId} closed`);
-      setIsConnected(false);
-      setRemoteStream(null);
-      setConnectionStatus('Call ended');
-      activeCalls.current.delete(remotePeerId);
-    });
-    
-    // Handle call errors
-    call.on('error', (err) => {
-      console.error(`${DEBUG_PREFIX} Call error:`, err);
-      setConnectionStatus(`Call error: ${err}`);
-    });
   };
 
   const disconnectCall = () => {
@@ -594,10 +619,10 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     startAnimation,
     stopAnimation,
     remoteVideoEnabled,
-    isCallRinging,       // Add this
-    incomingCall,        // Add this
-    acceptCall,          // Add this
-    rejectCall           // Add this
+    isCallRinging,
+    incomingCall,
+    acceptCall,
+    rejectCall
   };
 
   return (

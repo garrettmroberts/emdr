@@ -1,8 +1,26 @@
 "use client";
 
 import Image from 'next/image';
+import { useState, Dispatch, SetStateAction } from 'react';
+import AuthModal from './AuthModal';
 
-const Hero = () => {
+interface HeroProps {
+  setAuthModalOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+const Hero = ({ setAuthModalOpen }: HeroProps) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleModalOpen = () => {
+    setIsModalOpen(true);
+    setAuthModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setAuthModalOpen(false);
+  };
+
   return (
     <section className="hero">
       <div className="hero__content">
@@ -12,9 +30,16 @@ const Hero = () => {
             Provide effective EMDR therapy online through secure video sessions,
             bilateral stimulation tools, and an intuitive platform designed for therapists and clients.
           </p>
-          <a href="/auth" className="hero__cta">
+          <button 
+            onClick={handleModalOpen} 
+            className="hero__cta"
+          >
             <span className="hero__cta-highlight">Get Started</span> with Tapioca EMDR
-          </a>
+          </button>
+          <AuthModal 
+            isOpen={isModalOpen} 
+            onClose={handleModalClose} 
+          />
         </div>
         <div className="hero__visual">
           <div className="hero__circle hero__circle--primary"></div>

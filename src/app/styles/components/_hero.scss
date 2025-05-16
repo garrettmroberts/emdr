@@ -112,6 +112,9 @@
     position: relative;
     overflow: hidden;
     box-shadow: 0 10px 20px rgba($color-primary, 0.3);
+    margin-top: 30px;
+    border: none;
+    cursor: pointer;
     
     &:hover {
       transform: translateY(-3px);

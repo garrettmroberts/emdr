@@ -46,6 +46,7 @@ export default function Home() {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [visualActive, setVisualActive] = useState(false);
   const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   // Reset copy success message after 2 seconds
   useEffect(() => {
@@ -127,202 +128,205 @@ export default function Home() {
   // Landing page for unauthenticated users
   if (!user) {
     return (
-      <div className="container">
-        <Header />
-        
-        <main className="main">
-          <Toast 
-            message="Please check your email for a verification link to complete your registration."
-            visible={justSignedUp}
-            onClose={() => setJustSignedUp(false)}
-          />
-          
-          <Hero />
-          <Features />
-          <CTA />
-          
-          <footer className="footer">
-            <p>TapiocaEMDR • Secure and confidential • {new Date().getFullYear()} • Made with ❤ in Boulder, CO</p>
-          </footer>
-        </main>
-      </div>
+      <>
+        <div className={isAuthModalOpen ? 'blur-background' : ''}>
+          <Header setAuthModalOpen={setIsAuthModalOpen} />
+          <main className="main">
+            <Toast 
+              message="Please check your email for a verification link to complete your registration."
+              visible={justSignedUp}
+              onClose={() => setJustSignedUp(false)}
+            />
+            
+            <Hero setAuthModalOpen={setIsAuthModalOpen} />
+            <Features />
+            <CTA setAuthModalOpen={setIsAuthModalOpen} />
+            
+            <footer className="footer">
+              <p>TapiocaEMDR • Secure and confidential • {new Date().getFullYear()} • Made with ❤ in Boulder, CO</p>
+            </footer>
+          </main>
+        </div>
+      </>
     );
   }
 
   // App for authenticated users
   return (
-    <div className="container">
-      <Header />
-      <div className="main">
-        <div className="sessionContainer">
-          <div className="videoBackground">
-            {/* Remote video stream as full background */}
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className="remoteStream"
-            />
-            {!remoteStream && (
-              <div className="noStreamOverlay">
-                <p>Waiting for connection...</p>
-              </div>
-            )}
-            
-            {remoteStream && !remoteVideoEnabled && (
-              <div className="remoteVideoDisabledOverlay">
-                <FaVideoSlash size={50} />
-                <p>Video Paused</p>
-              </div>
-            )}
-            
-            {/* Local video as picture-in-picture */}
-            <div className="localStreamWrapper">
+    <>
+      <div className={isAuthModalOpen ? 'blur-background' : ''}>
+        <Header setAuthModalOpen={setIsAuthModalOpen} />
+        <div className="main">
+          <div className="sessionContainer">
+            <div className="videoBackground">
+              {/* Remote video stream as full background */}
               <video
-                ref={localVideoRef}
-                muted
+                ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                className="localStream"
+                className="remoteStream"
               />
-              {!videoEnabled && (
-                <div className="videoDisabledOverlay">
-                  <FaVideoSlash />
+              {!remoteStream && (
+                <div className="noStreamOverlay">
+                  <p>Waiting for connection...</p>
                 </div>
               )}
+              
+              {remoteStream && !remoteVideoEnabled && (
+                <div className="remoteVideoDisabledOverlay">
+                  <FaVideoSlash size={50} />
+                  <p>Video Paused</p>
+                </div>
+              )}
+              
+              {/* Local video as picture-in-picture */}
+              <div className="localStreamWrapper">
+                <video
+                  ref={localVideoRef}
+                  muted
+                  autoPlay
+                  playsInline
+                  className="localStream"
+                />
+                {!videoEnabled && (
+                  <div className="videoDisabledOverlay">
+                    <FaVideoSlash />
+                  </div>
+                )}
+              </div>
+              
+              {/* EMDR Visual overlay */}
+              <div className="visualOverlay">
+                <VisualElement 
+                  isActive={visualActive}
+                  peerControlled={userRole !== 'therapist'} 
+                />
+              </div>
             </div>
             
-            {/* EMDR Visual overlay */}
-            <div className="visualOverlay">
-              <VisualElement 
-                isActive={visualActive}
-                peerControlled={userRole !== 'therapist'} 
-              />
-            </div>
-          </div>
-          
-          {/* Call button (only visible for therapists) */}
-          {userRole === 'therapist' && (
-            <button 
-              onClick={remoteStream ? disconnectCall : openControlPanel}
-              className={`callButton ${remoteStream ? 'active' : ''}`}
-            >
-              {remoteStream ? <FaStop /> : <FaPhone />}
-            </button>
-          )}
+            {/* Call button (only visible for therapists) */}
+            {userRole === 'therapist' && (
+              <button 
+                onClick={remoteStream ? disconnectCall : openControlPanel}
+                className={`callButton ${remoteStream ? 'active' : ''}`}
+              >
+                {remoteStream ? <FaStop /> : <FaPhone />}
+              </button>
+            )}
 
-          {/* Control Panel Modal */}
-          {isControlPanelOpen && (
-            <div className="modalOverlay">
-              <div className="controlPanelModal">
-                <div className="modalHeader">
-                  <h3>Start a Session</h3>
-                  <button onClick={closeControlPanel} className="closeButton">
-                    <FaTimes />
-                  </button>
-                </div>
-                
-                <div className="controlsPanel">
-                  <div className="statusBar">
-                    <div className="connectionStatus">
-                      <span className={`statusDot ${connectionStatus.includes('Connected') ? 'connected' : ''}`}></span>
-                      <p>{connectionStatus}</p>
-                    </div>
-                    
-                    <div className="peerIdContainer">
-                      <div className="peerIdDisplay">
-                        <span>Your ID:</span>
-                        <code>{peerId}</code>
+            {/* Control Panel Modal */}
+            {isControlPanelOpen && (
+              <div className="modalOverlay">
+                <div className="controlPanelModal">
+                  <div className="modalHeader">
+                    <h3>Start a Session</h3>
+                    <button onClick={closeControlPanel} className="closeButton">
+                      <FaTimes />
+                    </button>
+                  </div>
+                  
+                  <div className="controlsPanel">
+                    <div className="statusBar">
+                      <div className="connectionStatus">
+                        <span className={`statusDot ${connectionStatus.includes('Connected') ? 'connected' : ''}`}></span>
+                        <p>{connectionStatus}</p>
                       </div>
-                      <button 
-                        onClick={handleCopy} 
-                        className="copyButton"
-                        disabled={copySuccess}
-                      >
-                        {copySuccess ? 'Copied!' : <FaCopy />}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="connectionControls">
-                    <div className="inputWrapper">
-                      <input
-                        type="text"
-                        placeholder={userRole === 'therapist' ? "Enter client's ID" : "Enter therapist's ID"}
-                        value={remotePeerId}
-                        onChange={(e) => setRemotePeerId(e.target.value)}
-                        className="peerIdInput"
-                      />
+                      
+                      <div className="peerIdContainer">
+                        <div className="peerIdDisplay">
+                          <span>Your ID:</span>
+                          <code>{peerId}</code>
+                        </div>
+                        <button 
+                          onClick={handleCopy} 
+                          className="copyButton"
+                          disabled={copySuccess}
+                        >
+                          {copySuccess ? 'Copied!' : <FaCopy />}
+                        </button>
+                      </div>
                     </div>
                     
-                    <div className="buttonGroup">
-                      <button
-                        onClick={() => {
-                          connectToPeer(remotePeerId);
-                          closeControlPanel();
-                        }}
-                        disabled={!localStream || !remotePeerId || remoteStream !== null}
-                        className="connectButton"
-                      >
-                        <FaPlay /> Connect
-                      </button>
+                    <div className="connectionControls">
+                      <div className="inputWrapper">
+                        <input
+                          type="text"
+                          placeholder={userRole === 'therapist' ? "Enter client's ID" : "Enter therapist's ID"}
+                          value={remotePeerId}
+                          onChange={(e) => setRemotePeerId(e.target.value)}
+                          className="peerIdInput"
+                        />
+                      </div>
                       
-                      <button
-                        onClick={disconnectCall}
-                        disabled={!remoteStream}
-                        className="disconnectButton"
-                      >
-                        <FaStop /> End Session
-                      </button>
+                      <div className="buttonGroup">
+                        <button
+                          onClick={() => {
+                            connectToPeer(remotePeerId);
+                            closeControlPanel();
+                          }}
+                          disabled={!localStream || !remotePeerId || remoteStream !== null}
+                          className="connectButton"
+                        >
+                          <FaPlay /> Connect
+                        </button>
+                        
+                        <button
+                          onClick={disconnectCall}
+                          disabled={!remoteStream}
+                          className="disconnectButton"
+                        >
+                          <FaStop /> End Session
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Media Control Bar */}
-          <MediaControlBar
-            toggleVideo={toggleVideo}
-            toggleAudio={toggleAudio}
-            toggleVisual={toggleVisual}
-            videoEnabled={videoEnabled}
-            audioEnabled={audioEnabled}
-            visualActive={visualActive}
-            localStream={localStream}
-            userRole={userRole || 'client'}
-          />
+            {/* Media Control Bar */}
+            <MediaControlBar
+              toggleVideo={toggleVideo}
+              toggleAudio={toggleAudio}
+              toggleVisual={toggleVisual}
+              videoEnabled={videoEnabled}
+              audioEnabled={audioEnabled}
+              visualActive={visualActive}
+              localStream={localStream}
+              userRole={userRole || 'client'}
+            />
 
-          {/* Incoming Call Overlay */}
-          {isCallRinging && (
-            <div className="incomingCallOverlay">
-              <div className="incomingCallModal">
-                <h3>Incoming Call</h3>
-                <p>Someone wants to start a session with you</p>
-                
-                <div className="callActions">
-                  <button 
-                    onClick={acceptCall}
-                    className="acceptCallButton"
-                  >
-                    <FaPhone /> Accept
-                  </button>
+            {/* Incoming Call Overlay */}
+            {isCallRinging && (
+              <div className="incomingCallOverlay">
+                <div className="incomingCallModal">
+                  <h3>Incoming Call</h3>
+                  <p>Someone wants to start a session with you</p>
                   
-                  <button 
-                    onClick={rejectCall}
-                    className="rejectCallButton"
-                  >
-                    <FaPhoneSlash /> Decline
-                  </button>
+                  <div className="callActions">
+                    <button 
+                      onClick={acceptCall}
+                      className="acceptCallButton"
+                    >
+                      <FaPhone /> Accept
+                    </button>
+                    
+                    <button 
+                      onClick={rejectCall}
+                      className="rejectCallButton"
+                    >
+                      <FaPhoneSlash /> Decline
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+        <footer className="footer">
+          <p>TapiocaEMDR • Secure and confidential • {new Date().getFullYear()} • Made with ❤ in Boulder, CO</p>
+        </footer>
       </div>
-      <footer className="footer">
-        <p>TapiocaEMDR • Secure and confidential • {new Date().getFullYear()} • Made with ❤ in Boulder, CO</p>
-      </footer>
-    </div>
+    </>
   );
 }

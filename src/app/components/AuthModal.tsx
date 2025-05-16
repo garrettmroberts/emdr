@@ -2,16 +2,23 @@
 
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { FaTimes } from 'react-icons/fa';
+import { createPortal } from 'react-dom';
 
-export default function AuthPage() {
+interface AuthModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('client'); // Default to client role
+  const [role, setRole] = useState('client');
   const [error, setError] = useState('');
   const { signIn, signUp, isLoading } = useAuth();
-  const router = useRouter();
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,17 +28,22 @@ export default function AuthPage() {
       if (isLogin) {
         await signIn(email, password);
       } else {
-        await signUp(email, password, role); // Pass the selected role
+        await signUp(email, password, role);
       }
-      router.push('/');
+      onClose(); // Close modal on success
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
   };
 
-  return (
-    <div className="authContainer">
-      <div className="authForm">
+  const modalContent = (
+    <div className="modal">
+      <div className="modal__overlay" onClick={onClose}></div>
+      <div className="modal__content authForm">
+        <button className="modal__close" onClick={onClose}>
+          <FaTimes />
+        </button>
+        
         <h1>{isLogin ? 'Login' : 'Sign Up'}</h1>
         
         {error && <div className="error">{error}</div>}
@@ -114,4 +126,9 @@ export default function AuthPage() {
       </div>
     </div>
   );
-}
+
+  // Use createPortal to render the modal at the root level
+  return typeof document !== 'undefined' 
+    ? createPortal(modalContent, document.body)
+    : null;
+} 

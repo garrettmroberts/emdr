@@ -5,24 +5,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 40px;
-    background-color: rgba($color-background-dark, 0.95);
-    backdrop-filter: blur(10px);
+    padding: 0 20px;
+    background-color: $color-background-dark;
     position: sticky;
     top: 0;
     z-index: 100;
     box-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
-    width: 100%; // Ensure full width
+    width: 100%;
+    box-sizing: border-box;
 
     &__title {
-        padding-left: 20px;
         margin-bottom: 0;
         color: $color-white;
         font-weight: 700;
         font-size: 1.8rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     &__auth-nav {
-        padding-right: 20px;
+        margin-left: 20px;
+        flex-shrink: 0;
     }
 }

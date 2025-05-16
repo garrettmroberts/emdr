@@ -1,12 +1,38 @@
 "use client";
 
+import { useState, Dispatch, SetStateAction } from 'react';
 import { useAuth } from '../context/AuthContext';
-import Link from 'next/link';
 import { usePeer } from '../context/PeerContext';
+import AuthModal from './AuthModal';
 
-export default function AuthNav() {
+interface AuthNavProps {
+  setAuthModalOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+export default function AuthNav({ setAuthModalOpen }: AuthNavProps) {
   const { user, userRole, signOut } = useAuth();
-  const { peerId } = usePeer();
+  const { peerId, localStream } = usePeer();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const handleSignOut = () => {
+    // Stop all tracks in the local stream
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    
+    // Sign out
+    signOut();
+  };
+
+  const handleModalOpen = () => {
+    setIsModalOpen(true);
+    setAuthModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setAuthModalOpen(false);
+  };
   
   return (
     <div className="authNav">
@@ -18,23 +44,29 @@ export default function AuthNav() {
           <span className="userName">
             {peerId}
           </span>
-          <Link href="/profile" className="profileLink">
+          <a href="/profile" className="profileLink">
             Profile
-          </Link>
+          </a>
           <button 
-            onClick={signOut} 
+            onClick={handleSignOut} 
             className="authButton"
           >
             Logout
           </button>
         </div>
       ) : (
-        <Link 
-          href="/auth" 
-          className="authButton"
-        >
-          Login
-        </Link>
+        <>
+          <button 
+            onClick={handleModalOpen} 
+            className="authButton"
+          >
+            Login
+          </button>
+          <AuthModal 
+            isOpen={isModalOpen} 
+            onClose={handleModalClose} 
+          />
+        </>
       )}
     </div>
   );
