@@ -4,16 +4,18 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
-// Update the type to include role
+// Update the type to include role and new state variables
 type AuthContextType = {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   userRole: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, role: string) => Promise<void>; // Updated to accept role
+  signUp: (email: string, password: string, role: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  justSignedUp: boolean;
+  setJustSignedUp: (value: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [justSignedUp, setJustSignedUp] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -76,7 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Updated to accept and store user role
   const signUp = async (email: string, password: string, role: string) => {
     setIsLoading(true);
     try {
@@ -92,6 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (error) throw error;
+      
+      // Set flag that user just signed up - will be checked on home page
+      setJustSignedUp(true);
       
       // Also insert into profiles table for better querying capability
       const user = await supabase.auth.getUser();
@@ -143,11 +148,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     isLoading,
-    userRole, // Expose role to consumers
+    userRole,
     signIn,
     signUp,
     signOut,
     resetPassword,
+    justSignedUp,
+    setJustSignedUp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

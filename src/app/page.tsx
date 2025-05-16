@@ -9,9 +9,16 @@ import Loader from "./components/Loader";
 import Image from 'next/image';
 import Header from "./components/Header";
 import MediaControlBar from "./components/MediaControlBar";
+import Toast from './components/Toast';
 
 export default function Home() {
-  const { user, userRole, isLoading } = useAuth();
+  const { 
+    user, 
+    userRole, 
+    isLoading, 
+    justSignedUp, 
+    setJustSignedUp 
+  } = useAuth();
   const {
     peerId,
     connectionStatus,
@@ -121,6 +128,11 @@ export default function Home() {
         <Header />
         
         <main className="main">
+        <Toast 
+          message="Please check your email for a verification link to complete your registration."
+          visible={justSignedUp}
+          onClose={() => setJustSignedUp(false)}
+        />
           {/* Hero Section */}
           <section className="hero">
             <div className="heroContent">
