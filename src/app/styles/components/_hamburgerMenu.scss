@@ -1,0 +1,40 @@
+.hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 30px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 150;
+    padding: 0;
+    margin-right: 20px;
+  }
+  
+  .hamburger span {
+    width: 30px;
+    height: 3px;
+    background: #fff;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+    transform-origin: 1px;
+  }
+  
+  .open span:first-child {
+    transform: rotate(45deg);
+  }
+  
+  .open span:nth-child(2) {
+    opacity: 0;
+  }
+  
+  .open span:last-child {
+    transform: rotate(-45deg);
+  }
+  
+  @media (max-width: 768px) {
+    .hamburger {
+      display: flex;
+    }
+  }

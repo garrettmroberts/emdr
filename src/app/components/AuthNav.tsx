@@ -4,12 +4,16 @@ import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
 import { usePeer } from '../context/PeerContext';
 
-export default function AuthNav() {
+interface AuthNavProps {
+  isMenuOpen?: boolean;
+}
+
+export default function AuthNav({ isMenuOpen = false }: AuthNavProps) {
   const { user, userRole, signOut } = useAuth();
   const { peerId } = usePeer();
   
   return (
-    <div className="authNav">
+    <div className={`authNav ${isMenuOpen ? 'menu-open' : ''}`}>
       {user ? (
         <div className="userInfo">
           <span className="userRole">
