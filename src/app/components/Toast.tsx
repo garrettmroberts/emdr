@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import styles from './Toast.module.css';
 import { FaEnvelope, FaTimes } from 'react-icons/fa';
 
 interface ToastProps {
@@ -34,12 +33,12 @@ export default function Toast({
   if (!visible) return null;
 
   return ReactDOM.createPortal(
-    <div className={`${styles.toast} ${styles[type]}`}>
-      <div className={styles.content}>
-        <FaEnvelope className={styles.icon} />
+    <div className={`toast toast--${type}`}>
+      <div className="toast__content">
+        <FaEnvelope className="toast__icon" />
         <span>{message}</span>
       </div>
-      <button onClick={onClose} className={styles.closeBtn}>
+      <button onClick={onClose} className="toast__close">
         <FaTimes />
       </button>
     </div>,

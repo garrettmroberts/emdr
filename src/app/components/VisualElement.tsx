@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePeer } from '../context/PeerContext';
-import styles from './VisualElement.module.css';
 
 interface VisualElementProps {
   isActive: boolean;
@@ -53,13 +52,13 @@ const VisualElement: React.FC<VisualElementProps> = ({
   if (!showBall) return null;
   
   return (
-    <div className={styles.container}>
+    <div className="visual">
       <div 
         ref={ballRef} 
-        className={`${styles.ball} ${styles.moving}`}
+        className={`visual__ball visual__ball--moving`}
       ></div>
       {timeLeft !== null && (
-        <div className={styles.timer}>
+        <div className="visual__timer">
           {timeLeft} seconds
         </div>
       )}

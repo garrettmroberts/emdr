@@ -1,0 +1,68 @@
+@import '../utils/variables';
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 300px;
+  max-width: 500px;
+  background-color: $color-primary;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100000000;
+  animation: toastSlideIn 0.3s ease forwards;
+
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__icon {
+    color: $color-white;
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    color: $color-white;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &--info {
+    border-left: 4px solid darken($color-primary, 10%);
+  }
+
+  &--success {
+    border-left: 4px solid #4CAF50;
+  }
+
+  &--warning {
+    border-left: 4px solid #FF9800;
+  }
+
+  &--error {
+    border-left: 4px solid #F44336;
+  }
+}
+
+@keyframes toastSlideIn {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+} 

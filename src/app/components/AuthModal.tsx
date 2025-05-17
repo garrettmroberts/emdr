@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { FaTimes } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
@@ -16,9 +16,24 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('client');
   const [error, setError] = useState('');
+  const [isClosing, setIsClosing] = useState(false);
   const { signIn, signUp, isLoading } = useAuth();
 
+  useEffect(() => {
+    if (isOpen) {
+      setIsClosing(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 300); // Match animation duration
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +45,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       } else {
         await signUp(email, password, role);
       }
-      onClose(); // Close modal on success
+      handleClose(); // Use handleClose instead of onClose
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -38,9 +53,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   const modalContent = (
     <div className="modal">
-      <div className="modal__overlay" onClick={onClose}></div>
-      <div className="modal__content authForm">
-        <button className="modal__close" onClick={onClose}>
+      <div className="modal__overlay" onClick={handleClose}>
+      </div>
+      <div className={`modal__content authForm ${isClosing ? 'closing' : ''}`}>
+        <button className="modal__close" onClick={handleClose}>
           <FaTimes />
         </button>
         
