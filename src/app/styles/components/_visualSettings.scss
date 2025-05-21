@@ -1,0 +1,84 @@
+@import '../utils/variables';
+
+.formGroup {
+  margin-bottom: 20px;
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    color: $color-white;
+    font-size: 0.9rem;
+  }
+
+  input[type="color"] {
+    width: 100%;
+    height: 40px;
+    padding: 2px;
+    border: 2px solid rgba($color-white, 0.1);
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+
+    &::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    &::-webkit-color-swatch {
+      border: none;
+      border-radius: 6px;
+    }
+  }
+
+  input[type="range"] {
+    width: 100%;
+    height: 6px;
+    background: rgba($color-white, 0.1);
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: $color-primary;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+    }
+  }
+
+  .sizeValue {
+    display: block;
+    margin-top: 8px;
+    color: $color-white;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+}
+
+.buttonGroup {
+  margin-top: 30px;
+  display: flex;
+  justify-content: flex-end;
+
+  .saveButton {
+    background: linear-gradient(90deg, $color-primary, $color-secondary);
+    color: $color-white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba($color-primary, 0.3);
+    }
+  }
+} 

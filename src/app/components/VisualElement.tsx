@@ -6,11 +6,15 @@ import { usePeer } from '../context/PeerContext';
 interface VisualElementProps {
   isActive: boolean;
   peerControlled?: boolean;
+  color?: string;
+  size?: number;
 }
 
 const VisualElement: React.FC<VisualElementProps> = ({
   isActive = false,
-  peerControlled = false
+  peerControlled = false,
+  color = '#169976',
+  size = 100
 }) => {
   const { animationActive } = usePeer();
   
@@ -56,6 +60,12 @@ const VisualElement: React.FC<VisualElementProps> = ({
       <div 
         ref={ballRef} 
         className={`visual__ball visual__ball--moving`}
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          backgroundColor: color,
+          boxShadow: `0 0 20px ${color}99`
+        }}
       ></div>
       {timeLeft !== null && (
         <div className="visual__timer">

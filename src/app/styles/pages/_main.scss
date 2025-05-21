@@ -464,6 +464,7 @@
     overflow: hidden;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     border: 2px solid rgba($color-primary, 0.6);
+    overflow: visible;
     
     .localStream {
       width: 100%;

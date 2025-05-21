@@ -1,6 +1,8 @@
 "use client";
 
-import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPlay, FaPause } from 'react-icons/fa';
+import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPlay, FaPause, FaCog } from 'react-icons/fa';
+import { useState } from 'react';
+import VisualSettingsModal from './VisualSettingsModal';
 
 interface MediaControlBarProps {
   toggleVideo: () => void;
@@ -11,6 +13,7 @@ interface MediaControlBarProps {
   visualActive: boolean;
   localStream: MediaStream | null;
   userRole: string;
+  onVisualSettingsChange?: (settings: { color: string; size: number }) => void;
 }
 
 export default function MediaControlBar({
@@ -21,8 +24,17 @@ export default function MediaControlBar({
   audioEnabled,
   visualActive,
   localStream,
-  userRole
+  userRole,
+  onVisualSettingsChange
 }: MediaControlBarProps) {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const handleSettingsSave = (settings: { color: string; size: number }) => {
+    if (onVisualSettingsChange) {
+      onVisualSettingsChange(settings);
+    }
+  };
+
   return (
     <div className="mediaControlBar">
       <div className="mediaControlsWrapper">
@@ -46,16 +58,33 @@ export default function MediaControlBar({
         
         {/* Only therapists can control the visualization */}
         {userRole === 'therapist' && (
-          <button 
-            onClick={toggleVisual}
-            className={`mediaButton ${visualActive ? 'active' : ''}`}
-            disabled={!localStream}
-          >
-            {visualActive ? <FaPause /> : <FaPlay />}
-            <span>{visualActive ? 'Stop Visual' : 'Start Visual'}</span>
-          </button>
+          <>
+            <button 
+              onClick={toggleVisual}
+              className={`mediaButton ${visualActive ? 'active' : ''}`}
+              disabled={!localStream}
+            >
+              {visualActive ? <FaPause /> : <FaPlay />}
+              <span>{visualActive ? 'Stop Visual' : 'Start Visual'}</span>
+            </button>
+
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="mediaButton"
+              disabled={!localStream}
+            >
+              <FaCog />
+              <span>Settings</span>
+            </button>
+          </>
         )}
       </div>
+
+      <VisualSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={handleSettingsSave}
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import Toast from './components/Toast';
 import Hero from './components/Hero';
 import CTA from './components/CTA';
 import Features from './components/Features';
+import DeviceSelector from './components/DeviceSelector';
 
 export default function Home() {
   const { 
@@ -37,7 +38,9 @@ export default function Home() {
     remoteVideoEnabled,
     isCallRinging,
     acceptCall,
-    rejectCall
+    rejectCall,
+    switchVideoDevice,
+    switchAudioDevice,
   } = usePeer();
   
   const [copySuccess, setCopySuccess] = useState(false);
@@ -46,6 +49,7 @@ export default function Home() {
   const [visualActive, setVisualActive] = useState(false);
   const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [visualSettings, setVisualSettings] = useState({ color: '#169976', size: 100 });
   
   // Reset copy success message after 2 seconds
   useEffect(() => {
@@ -114,6 +118,12 @@ export default function Home() {
   
   const closeControlPanel = () => {
     setIsControlPanelOpen(false);
+  };
+
+  const handleVisualSettingsChange = (settings: { color: string; size: number }) => {
+    setVisualSettings(settings);
+    // Send settings to peer
+    sendMessageToPeer(JSON.stringify({ type: 'visual-settings', settings }));
   };
 
   if (isLoading) {
@@ -192,13 +202,20 @@ export default function Home() {
                     <FaVideoSlash />
                   </div>
                 )}
+                <DeviceSelector
+                  onVideoDeviceChange={switchVideoDevice}
+                  onAudioDeviceChange={switchAudioDevice}
+                  hasMediaAccess={!!localStream}
+                />
               </div>
               
               {/* EMDR Visual overlay */}
               <div className="visualOverlay">
                 <VisualElement 
                   isActive={visualActive}
-                  peerControlled={userRole !== 'therapist'} 
+                  peerControlled={userRole !== 'therapist'}
+                  color={visualSettings.color}
+                  size={visualSettings.size}
                 />
               </div>
             </div>
@@ -293,6 +310,7 @@ export default function Home() {
               visualActive={visualActive}
               localStream={localStream}
               userRole={userRole || 'client'}
+              onVisualSettingsChange={handleVisualSettingsChange}
             />
 
             {/* Incoming Call Overlay */}

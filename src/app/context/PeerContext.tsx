@@ -34,6 +34,8 @@ interface PeerContextType {
   incomingCall: MediaConnection | null;
   acceptCall: () => void;
   rejectCall: () => void;
+  switchVideoDevice: (deviceId: string) => Promise<void>;
+  switchAudioDevice: (deviceId: string) => Promise<void>;
 }
 
 export const PeerContext = createContext<PeerContextType | null>(null);
@@ -221,19 +223,27 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const handleDataMessage = (data: string) => {
     console.log('Message received:', data);
 
-    if (data === 'start-visual') {
-      console.log('Starting visual animation');
-      setAnimationActive(true);
+    try {
+      const parsedData = JSON.parse(data);
+      if (parsedData.type === 'visual-settings') {
+        const { settings } = parsedData;
+        return;
+      }
+    } catch (e) {
+      if (data === 'start-visual') {
+        console.log('Starting visual animation');
+        setAnimationActive(true);
 
-      setTimeout(() => {
+        setTimeout(() => {
+          setAnimationActive(false);
+        }, 20000);
+      } else if (data === 'stop-visual') {
         setAnimationActive(false);
-      }, 20000);
-    } else if (data === 'stop-visual') {
-      setAnimationActive(false);
-    } else if (data === 'video-disabled') {
-      setRemoteVideoEnabled(false);
-    } else if (data === 'video-enabled') {
-      setRemoteVideoEnabled(true);
+      } else if (data === 'video-disabled') {
+        setRemoteVideoEnabled(false);
+      } else if (data === 'video-enabled') {
+        setRemoteVideoEnabled(true);
+      }
     }
   };
 
@@ -600,6 +610,86 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setConnectionStatus('Call rejected');
   };
 
+  const switchVideoDevice = async (deviceId: string) => {
+    if (!localStream) return;
+
+    try {
+      // Stop existing video tracks
+      localStream.getVideoTracks().forEach(track => track.stop());
+
+      // Get new video stream with selected device
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: { exact: deviceId },
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          frameRate: { ideal: 30, min: 15 },
+          facingMode: 'user',
+          aspectRatio: { ideal: 1.7778 },
+        },
+        audio: false
+      });
+
+      // Add new video track to existing stream
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      localStream.addTrack(newVideoTrack);
+
+      // Update video element
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStream;
+      }
+
+      // Update active calls with new stream
+      activeCalls.current.forEach(call => {
+        call.peerConnection.getSenders().forEach(sender => {
+          if (sender.track?.kind === 'video') {
+            sender.replaceTrack(newVideoTrack);
+          }
+        });
+      });
+    } catch (err) {
+      console.error('Error switching video device:', err);
+    }
+  };
+
+  const switchAudioDevice = async (deviceId: string) => {
+    if (!localStream) return;
+
+    try {
+      // Stop existing audio tracks
+      localStream.getAudioTracks().forEach(track => track.stop());
+
+      // Get new audio stream with selected device
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: {
+          deviceId: { exact: deviceId },
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 2,
+          sampleRate: 48000,
+          sampleSize: 16
+        }
+      });
+
+      // Add new audio track to existing stream
+      const newAudioTrack = newStream.getAudioTracks()[0];
+      localStream.addTrack(newAudioTrack);
+
+      // Update active calls with new stream
+      activeCalls.current.forEach(call => {
+        call.peerConnection.getSenders().forEach(sender => {
+          if (sender.track?.kind === 'audio') {
+            sender.replaceTrack(newAudioTrack);
+          }
+        });
+      });
+    } catch (err) {
+      console.error('Error switching audio device:', err);
+    }
+  };
+
   const value = {
     peerId,
     peer,
@@ -622,7 +712,9 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isCallRinging,
     incomingCall,
     acceptCall,
-    rejectCall
+    rejectCall,
+    switchVideoDevice,
+    switchAudioDevice,
   };
 
   return (
