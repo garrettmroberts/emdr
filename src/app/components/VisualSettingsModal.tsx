@@ -1,32 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
 
 interface VisualSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (settings: { color: string; size: number }) => void;
-  initialColor?: string;
-  initialSize?: number;
+  onSettingsChange: (settings: { color: string; size: number; duration: number }) => void;
+  initialSettings?: { color: string; size: number; duration: number };
 }
 
 export default function VisualSettingsModal({
   isOpen,
   onClose,
-  onSave,
-  initialColor = '#169976',
-  initialSize = 100
+  onSettingsChange,
+  initialSettings = { color: '#169976', size: 100, duration: 20 }
 }: VisualSettingsModalProps) {
-  const [color, setColor] = useState(initialColor);
-  const [size, setSize] = useState(initialSize);
+  const [color, setColor] = useState(initialSettings.color);
+  const [size, setSize] = useState(initialSettings.size);
+  const [duration, setDuration] = useState(initialSettings.duration);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setColor(initialSettings.color);
+      setSize(initialSettings.size);
+      setDuration(initialSettings.duration);
+    }
+  }, [isOpen, initialSettings]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ color, size });
+    onSettingsChange({ color, size, duration });
     onClose();
   };
+
+  if (!isOpen) return null;
 
   const modalContent = (
     <div className="modal">
@@ -57,6 +64,19 @@ export default function VisualSettingsModal({
               onChange={(e) => setSize(Number(e.target.value))}
             />
             <span className="sizeValue">{size}px</span>
+          </div>
+          <div className="formGroup">
+            <label htmlFor="duration">Duration (seconds)</label>
+            <input
+              type="range"
+              id="duration"
+              min="5"
+              max="60"
+              step="5"
+              value={duration}
+              onChange={(e) => setDuration(Number(e.target.value))}
+            />
+            <span className="sizeValue">{duration}s</span>
           </div>
           <div className="buttonGroup">
             <button type="submit" className="saveButton">Save Settings</button>

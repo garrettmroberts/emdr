@@ -1,6 +1,6 @@
 "use client";
 
-import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPlay, FaPause, FaCog } from 'react-icons/fa';
+import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPlay, FaPause, FaCog, FaEye } from 'react-icons/fa';
 import { useState } from 'react';
 import VisualSettingsModal from './VisualSettingsModal';
 
@@ -13,7 +13,8 @@ interface MediaControlBarProps {
   visualActive: boolean;
   localStream: MediaStream | null;
   userRole: string;
-  onVisualSettingsChange?: (settings: { color: string; size: number }) => void;
+  onVisualSettingsChange: (settings: { color: string; size: number; duration: number }) => void;
+  visualSettings?: { color: string; size: number; duration: number };
 }
 
 export default function MediaControlBar({
@@ -25,65 +26,54 @@ export default function MediaControlBar({
   visualActive,
   localStream,
   userRole,
-  onVisualSettingsChange
+  onVisualSettingsChange,
+  visualSettings = { color: '#169976', size: 100, duration: 20 }
 }: MediaControlBarProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  const handleSettingsSave = (settings: { color: string; size: number }) => {
-    if (onVisualSettingsChange) {
-      onVisualSettingsChange(settings);
-    }
-  };
 
   return (
     <div className="mediaControlBar">
       <div className="mediaControlsWrapper">
-        <button 
+        <button
           onClick={toggleVideo}
           className={`mediaButton ${!videoEnabled ? 'disabled' : ''}`}
           disabled={!localStream}
         >
           {videoEnabled ? <FaVideo /> : <FaVideoSlash />}
-          <span>{videoEnabled ? 'Disable Video' : 'Enable Video'}</span>
+          <span>Video</span>
         </button>
-        
-        <button 
+        <button
           onClick={toggleAudio}
           className={`mediaButton ${!audioEnabled ? 'disabled' : ''}`}
           disabled={!localStream}
         >
           {audioEnabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
-          <span>{audioEnabled ? 'Mute Audio' : 'Unmute Audio'}</span>
+          <span>Audio</span>
         </button>
-        
-        {/* Only therapists can control the visualization */}
+        <button
+          onClick={toggleVisual}
+          className={`mediaButton ${visualActive ? 'active' : ''}`}
+          disabled={!localStream}
+        >
+          <FaEye />
+          <span>Visual</span>
+        </button>
         {userRole === 'therapist' && (
-          <>
-            <button 
-              onClick={toggleVisual}
-              className={`mediaButton ${visualActive ? 'active' : ''}`}
-              disabled={!localStream}
-            >
-              {visualActive ? <FaPause /> : <FaPlay />}
-              <span>{visualActive ? 'Stop Visual' : 'Start Visual'}</span>
-            </button>
-
-            <button 
-              onClick={() => setIsSettingsOpen(true)}
-              className="mediaButton"
-              disabled={!localStream}
-            >
-              <FaCog />
-              <span>Settings</span>
-            </button>
-          </>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="mediaButton"
+          >
+            <FaCog />
+            <span>Settings</span>
+          </button>
         )}
       </div>
 
       <VisualSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        onSave={handleSettingsSave}
+        onSettingsChange={onVisualSettingsChange}
+        initialSettings={visualSettings}
       />
     </div>
   );

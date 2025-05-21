@@ -49,7 +49,11 @@ export default function Home() {
   const [visualActive, setVisualActive] = useState(false);
   const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [visualSettings, setVisualSettings] = useState({ color: '#169976', size: 100 });
+  const [visualSettings, setVisualSettings] = useState({ 
+    color: '#169976', 
+    size: 100,
+    duration: 20 
+  });
   
   // Reset copy success message after 2 seconds
   useEffect(() => {
@@ -93,18 +97,18 @@ export default function Home() {
     }
   };
 
-  // Function to toggle visual element with auto turn-off after 20 seconds
+  // Function to toggle visual element with custom duration
   const toggleVisual = () => {
     // Only proceed if turning animation ON
     if (!visualActive) {
       setVisualActive(true);
       sendMessageToPeer('start-visual');
       
-      // Auto turn off after 20 seconds
+      // Auto turn off after custom duration
       setTimeout(() => {
         setVisualActive(false);
         sendMessageToPeer('stop-visual');
-      }, 20000);
+      }, visualSettings.duration * 1000);
     } else {
       // Manual turn off
       setVisualActive(false);
@@ -120,7 +124,7 @@ export default function Home() {
     setIsControlPanelOpen(false);
   };
 
-  const handleVisualSettingsChange = (settings: { color: string; size: number }) => {
+  const handleVisualSettingsChange = (settings: { color: string; size: number; duration: number }) => {
     setVisualSettings(settings);
     // Send settings to peer
     sendMessageToPeer(JSON.stringify({ type: 'visual-settings', settings }));
