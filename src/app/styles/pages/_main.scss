@@ -485,13 +485,21 @@
       color: $color-white;
     }
 
-    .cameraToggleContainer {
+    .deviceControls {
       position: absolute;
       bottom: 8px;
       right: 8px;
+      display: flex;
+      gap: 8px;
       z-index: 4;
     }
 
+    .micToggleContainer,
+    .cameraToggleContainer {
+      position: relative;
+    }
+
+    .micToggleButton,
     .cameraToggleButton {
       width: 32px;
       height: 32px;
@@ -517,6 +525,7 @@
       }
     }
 
+    .micMenu,
     .cameraMenu {
       position: absolute;
       bottom: 100%;
@@ -530,6 +539,7 @@
       overflow: hidden;
       animation: slideDown 0.2s ease;
 
+      .micMenuItem,
       .cameraMenuItem {
         display: block;
         width: 100%;

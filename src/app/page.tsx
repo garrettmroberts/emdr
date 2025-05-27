@@ -4,7 +4,7 @@ import { usePeer } from "./context/PeerContext";
 import VisualElement from "./components/VisualElement";
 import { useAuth } from "./context/AuthContext";
 import { useEffect, useState } from "react";
-import { FaCopy, FaPlay, FaStop, FaVideoSlash, FaPhone, FaTimes, FaPhoneSlash, FaCamera } from 'react-icons/fa';
+import { FaCopy, FaPlay, FaStop, FaVideoSlash, FaPhone, FaTimes, FaPhoneSlash, FaCamera, FaMicrophone } from 'react-icons/fa';
 import Loader from "./components/Loader";
 import Header from "./components/Header";
 import MediaControlBar from "./components/MediaControlBar";
@@ -49,8 +49,11 @@ export default function Home() {
   const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [availableMics, setAvailableMics] = useState<MediaDeviceInfo[]>([]);
   const [isCameraMenuOpen, setIsCameraMenuOpen] = useState(false);
+  const [isMicMenuOpen, setIsMicMenuOpen] = useState(false);
   const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
+  const [activeMicId, setActiveMicId] = useState<string | null>(null);
   
   // Reset copy success message after 2 seconds
   useEffect(() => {
@@ -169,40 +172,55 @@ export default function Home() {
     setIsControlPanelOpen(false);
   };
 
-  // Update activeCameraId when localStream changes
+  // Get available devices when component mounts
+  useEffect(() => {
+    const getDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        const audioDevices = devices.filter(device => device.kind === 'audioinput');
+        setAvailableCameras(videoDevices);
+        setAvailableMics(audioDevices);
+        
+        // If we have devices and no active IDs, set the first ones as active
+        if (videoDevices.length > 0 && !activeCameraId) {
+          setActiveCameraId(videoDevices[0].deviceId);
+        }
+        if (audioDevices.length > 0 && !activeMicId) {
+          setActiveMicId(audioDevices[0].deviceId);
+        }
+      } catch (err) {
+        console.error('Error getting devices:', err);
+      }
+    };
+    
+    getDevices();
+  }, [activeCameraId, activeMicId]);
+
+  // Update active device IDs when localStream changes
   useEffect(() => {
     if (localStream) {
       const videoTrack = localStream.getVideoTracks()[0];
+      const audioTrack = localStream.getAudioTracks()[0];
+      
       if (videoTrack) {
         const settings = videoTrack.getSettings();
         if (settings.deviceId) {
           setActiveCameraId(settings.deviceId);
         }
       }
+      
+      if (audioTrack) {
+        const settings = audioTrack.getSettings();
+        if (settings.deviceId) {
+          setActiveMicId(settings.deviceId);
+        }
+      }
+      
       // Ensure video is enabled when stream is available
       setVideoEnabled(true);
     }
   }, [localStream]);
-
-  // Get available cameras when component mounts
-  useEffect(() => {
-    const getCameras = async () => {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        setAvailableCameras(videoDevices);
-        
-        // If we have cameras and no active camera ID, set the first one as active
-        if (videoDevices.length > 0 && !activeCameraId) {
-          setActiveCameraId(videoDevices[0].deviceId);
-        }
-      } catch (err) {
-        console.error('Error getting cameras:', err);
-      }
-    };
-    
-    getCameras();
-  }, [activeCameraId]);
 
   // Toggle between available cameras
   const toggleCamera = async (deviceId: string) => {
@@ -245,6 +263,51 @@ export default function Home() {
       setIsCameraMenuOpen(false);
     } catch (err) {
       console.error('Error switching camera:', err);
+    }
+  };
+
+  // Toggle between available microphones
+  const toggleMic = async (deviceId: string) => {
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: activeCameraId ? { exact: activeCameraId } : undefined,
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          frameRate: { ideal: 30, min: 15 },
+          aspectRatio: { ideal: 1.7778 }
+        },
+        audio: {
+          deviceId: { exact: deviceId },
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 2,
+          sampleRate: 48000,
+          sampleSize: 16
+        }
+      });
+      
+      // Stop old tracks
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+      
+      // Update the stream
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = newStream;
+      }
+      
+      // Update the stream in the peer context
+      updateLocalStream(newStream);
+      
+      // Update active mic
+      setActiveMicId(deviceId);
+      
+      // Close the menu after selection
+      setIsMicMenuOpen(false);
+    } catch (err) {
+      console.error('Error switching microphone:', err);
     }
   };
 
@@ -331,30 +394,56 @@ export default function Home() {
                     <FaVideoSlash />
                   </div>
                 )}
-                {availableCameras.length > 1 && (
-                  <div className="cameraToggleContainer">
-                    <button 
-                      onClick={() => setIsCameraMenuOpen(!isCameraMenuOpen)}
-                      className="cameraToggleButton"
-                      title="Switch Camera"
-                    >
-                      <FaCamera />
-                    </button>
-                    {isCameraMenuOpen && (
-                      <div className="cameraMenu">
-                        {availableCameras.map((camera, index) => (
-                          <button
-                            key={camera.deviceId}
-                            onClick={() => toggleCamera(camera.deviceId)}
-                            className={`cameraMenuItem ${camera.deviceId === activeCameraId ? 'active' : ''}`}
-                          >
-                            {camera.label || `Camera ${index + 1}`}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="deviceControls">
+                  {availableMics.length > 1 && (
+                    <div className="micToggleContainer">
+                      <button 
+                        onClick={() => setIsMicMenuOpen(!isMicMenuOpen)}
+                        className="micToggleButton"
+                        title="Switch Microphone"
+                      >
+                        <FaMicrophone />
+                      </button>
+                      {isMicMenuOpen && (
+                        <div className="micMenu">
+                          {availableMics.map((mic, index) => (
+                            <button
+                              key={mic.deviceId}
+                              onClick={() => toggleMic(mic.deviceId)}
+                              className={`micMenuItem ${mic.deviceId === activeMicId ? 'active' : ''}`}
+                            >
+                              {mic.label || `Microphone ${index + 1}`}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {availableCameras.length > 1 && (
+                    <div className="cameraToggleContainer">
+                      <button 
+                        onClick={() => setIsCameraMenuOpen(!isCameraMenuOpen)}
+                        className="cameraToggleButton"
+                        title="Switch Camera"
+                      >
+                        <FaCamera />
+                      </button>
+                      {isCameraMenuOpen && (
+                        <div className="cameraMenu">
+                          {availableCameras.map((camera, index) => (
+                            <button
+                              key={camera.deviceId}
+                              onClick={() => toggleCamera(camera.deviceId)}
+                              className={`cameraMenuItem ${camera.deviceId === activeCameraId ? 'active' : ''}`}
+                            >
+                              {camera.label || `Camera ${index + 1}`}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               
               {/* EMDR Visual overlay */}
