@@ -4,7 +4,7 @@ import { usePeer } from "./context/PeerContext";
 import VisualElement from "./components/VisualElement";
 import { useAuth } from "./context/AuthContext";
 import { useEffect, useState } from "react";
-import { FaCopy, FaPlay, FaStop, FaVideoSlash, FaPhone, FaTimes, FaPhoneSlash } from 'react-icons/fa';
+import { FaCopy, FaPlay, FaStop, FaVideoSlash, FaPhone, FaTimes, FaPhoneSlash, FaCamera } from 'react-icons/fa';
 import Loader from "./components/Loader";
 import Header from "./components/Header";
 import MediaControlBar from "./components/MediaControlBar";
@@ -37,7 +37,9 @@ export default function Home() {
     remoteVideoEnabled,
     isCallRinging,
     acceptCall,
-    rejectCall
+    rejectCall,
+    updateLocalStream,
+    isConnected
   } = usePeer();
   
   const [copySuccess, setCopySuccess] = useState(false);
@@ -46,6 +48,9 @@ export default function Home() {
   const [visualActive, setVisualActive] = useState(false);
   const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [isCameraMenuOpen, setIsCameraMenuOpen] = useState(false);
+  const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
   
   // Reset copy success message after 2 seconds
   useEffect(() => {
@@ -66,11 +71,59 @@ export default function Home() {
     if (localStream) {
       const videoTracks = localStream.getVideoTracks();
       
-      videoTracks.forEach(track => {
-        track.enabled = !videoEnabled;
-      });
+      if (videoEnabled) {
+        // When disabling video, stop the tracks completely
+        videoTracks.forEach(track => {
+          track.stop();
+        });
+        
+        // Create a new stream with only audio
+        const audioTracks = localStream.getAudioTracks();
+        const newStream = new MediaStream();
+        audioTracks.forEach(track => newStream.addTrack(track));
+        
+        // Update the stream
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = newStream;
+        }
+        
+        // Update the stream in the peer context
+        updateLocalStream(newStream);
+      } else {
+        // When enabling video, get a new stream with video
+        navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: activeCameraId ? { exact: activeCameraId } : undefined,
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 },
+            frameRate: { ideal: 30, min: 15 },
+            aspectRatio: { ideal: 1.7778 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 2,
+            sampleRate: 48000,
+            sampleSize: 16
+          }
+        }).then(newStream => {
+          // Update the stream
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = newStream;
+          }
+          
+          // Update the stream in the peer context
+          updateLocalStream(newStream);
+        }).catch(err => {
+          console.error('Error re-enabling video:', err);
+        });
+      }
       
-      sendMessageToPeer(videoEnabled ? 'video-disabled' : 'video-enabled');
+      // Only send message if we have an active connection
+      if (remoteStream) {
+        sendMessageToPeer(videoEnabled ? 'video-disabled' : 'video-enabled');
+      }
       
       setVideoEnabled(!videoEnabled);
     }
@@ -114,6 +167,85 @@ export default function Home() {
   
   const closeControlPanel = () => {
     setIsControlPanelOpen(false);
+  };
+
+  // Update activeCameraId when localStream changes
+  useEffect(() => {
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        const settings = videoTrack.getSettings();
+        if (settings.deviceId) {
+          setActiveCameraId(settings.deviceId);
+        }
+      }
+      // Ensure video is enabled when stream is available
+      setVideoEnabled(true);
+    }
+  }, [localStream]);
+
+  // Get available cameras when component mounts
+  useEffect(() => {
+    const getCameras = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        setAvailableCameras(videoDevices);
+        
+        // If we have cameras and no active camera ID, set the first one as active
+        if (videoDevices.length > 0 && !activeCameraId) {
+          setActiveCameraId(videoDevices[0].deviceId);
+        }
+      } catch (err) {
+        console.error('Error getting cameras:', err);
+      }
+    };
+    
+    getCameras();
+  }, [activeCameraId]);
+
+  // Toggle between available cameras
+  const toggleCamera = async (deviceId: string) => {
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: { exact: deviceId },
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          frameRate: { ideal: 30, min: 15 },
+          aspectRatio: { ideal: 1.7778 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 2,
+          sampleRate: 48000,
+          sampleSize: 16
+        }
+      });
+      
+      // Stop old tracks
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+      
+      // Update the stream
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = newStream;
+      }
+      
+      // Update the stream in the peer context
+      updateLocalStream(newStream);
+      
+      // Update active camera
+      setActiveCameraId(deviceId);
+      
+      // Close the menu after selection
+      setIsCameraMenuOpen(false);
+    } catch (err) {
+      console.error('Error switching camera:', err);
+    }
   };
 
   if (isLoading) {
@@ -177,6 +309,13 @@ export default function Home() {
                   <p>Video Paused</p>
                 </div>
               )}
+
+              {!isConnected && remoteVideoRef.current?.srcObject && (
+                <div className="callEndedOverlay">
+                  <FaPhoneSlash size={50} />
+                  <p>Call Ended</p>
+                </div>
+              )}
               
               {/* Local video as picture-in-picture */}
               <div className="localStreamWrapper">
@@ -190,6 +329,30 @@ export default function Home() {
                 {!videoEnabled && (
                   <div className="videoDisabledOverlay">
                     <FaVideoSlash />
+                  </div>
+                )}
+                {availableCameras.length > 1 && (
+                  <div className="cameraToggleContainer">
+                    <button 
+                      onClick={() => setIsCameraMenuOpen(!isCameraMenuOpen)}
+                      className="cameraToggleButton"
+                      title="Switch Camera"
+                    >
+                      <FaCamera />
+                    </button>
+                    {isCameraMenuOpen && (
+                      <div className="cameraMenu">
+                        {availableCameras.map((camera, index) => (
+                          <button
+                            key={camera.deviceId}
+                            onClick={() => toggleCamera(camera.deviceId)}
+                            className={`cameraMenuItem ${camera.deviceId === activeCameraId ? 'active' : ''}`}
+                          >
+                            {camera.label || `Camera ${index + 1}`}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

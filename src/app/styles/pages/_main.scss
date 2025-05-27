@@ -461,7 +461,7 @@
     height: 165px; // 16:9 aspect ratio
     z-index: 3;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible; // Changed from hidden to allow dropdown to be visible
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     border: 2px solid rgba($color-primary, 0.6);
     
@@ -483,6 +483,97 @@
       background-color: rgba(0, 0, 0, 0.8);
       font-size: 3rem;
       color: $color-white;
+    }
+
+    .cameraToggleContainer {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      z-index: 4;
+    }
+
+    .cameraToggleButton {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: rgba($color-background-dark, 0.8);
+      border: 2px solid rgba($color-white, 0.6);
+      color: $color-white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      
+      &:hover {
+        background-color: rgba($color-primary, 0.8);
+        border-color: $color-white;
+        transform: scale(1.1);
+      }
+      
+      svg {
+        font-size: 1rem;
+      }
+    }
+
+    .cameraMenu {
+      position: absolute;
+      bottom: 100%;
+      right: 0;
+      margin-bottom: 8px;
+      background-color: rgba($color-background-dark, 0.95);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba($color-white, 0.1);
+      min-width: 180px;
+      overflow: hidden;
+      animation: slideDown 0.2s ease;
+
+      .cameraMenuItem {
+        display: block;
+        width: 100%;
+        padding: 10px 16px;
+        text-align: left;
+        background: none;
+        border: none;
+        color: $color-white;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        position: relative;
+
+        &:hover {
+          background-color: rgba($color-primary, 0.2);
+        }
+
+        &:not(:last-child) {
+          border-bottom: 1px solid rgba($color-white, 0.1);
+        }
+
+        &.active {
+          background-color: rgba($color-primary, 0.3);
+          color: $color-primary;
+          font-weight: 500;
+          padding-left: 32px;
+
+          &::before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: $color-primary;
+            box-shadow: 0 0 8px rgba($color-primary, 0.5);
+          }
+        }
+      }
     }
   }
   
@@ -714,7 +805,7 @@ input, button, textarea, select {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: #000000;
   color: white;
   z-index: 2;
 }
@@ -725,6 +816,30 @@ input, button, textarea, select {
 }
 
 .remoteVideoDisabledOverlay p {
+  font-size: 1.5rem;
+}
+
+.callEndedOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #000000;
+  color: white;
+  z-index: 2;
+}
+
+.callEndedOverlay svg {
+  margin-bottom: 10px;
+  opacity: 0.8;
+}
+
+.callEndedOverlay p {
   font-size: 1.5rem;
 }
 
@@ -911,4 +1026,16 @@ input, button, textarea, select {
 @keyframes slideUp {
   from { transform: translateY(30px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+// Add new animation
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

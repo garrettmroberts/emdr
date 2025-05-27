@@ -34,6 +34,7 @@ interface PeerContextType {
   incomingCall: MediaConnection | null;
   acceptCall: () => void;
   rejectCall: () => void;
+  updateLocalStream: (newStream: MediaStream) => void;
 }
 
 export const PeerContext = createContext<PeerContextType | null>(null);
@@ -524,6 +525,11 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     activeCalls.current.clear();
 
+    // Clear the remote video element
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+
     setIsConnected(false);
     setRemoteStream(null);
     setConnectionStatus('Disconnected');
@@ -600,6 +606,32 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setConnectionStatus('Call rejected');
   };
 
+  const updateLocalStream = (newStream: MediaStream) => {
+    debugLog('Updating local stream');
+    setLocalStream(newStream);
+    
+    // Update all active calls with the new stream
+    activeCalls.current.forEach((call, peerId) => {
+      if (call.open && call.peerConnection) {
+        debugLog(`Updating stream for call with ${peerId}`);
+        
+        // Get the sender for each track type
+        const senders = call.peerConnection.getSenders();
+        
+        // Replace each track
+        newStream.getTracks().forEach(newTrack => {
+          const sender = senders.find(s => s.track?.kind === newTrack.kind);
+          if (sender) {
+            debugLog(`Replacing ${newTrack.kind} track`);
+            sender.replaceTrack(newTrack).catch(err => {
+              console.error(`Error replacing ${newTrack.kind} track:`, err);
+            });
+          }
+        });
+      }
+    });
+  };
+
   const value = {
     peerId,
     peer,
@@ -622,7 +654,8 @@ export const PeerProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isCallRinging,
     incomingCall,
     acceptCall,
-    rejectCall
+    rejectCall,
+    updateLocalStream
   };
 
   return (
