@@ -2,10 +2,6 @@
 
 A secure, web-based platform for conducting Eye Movement Desensitization and Reprocessing (EMDR) therapy sessions online. Built specifically for therapists and clients to engage in effective trauma processing through bilateral stimulation tools and encrypted video communication.
 
-## 🌐 Live Application
-
-**Visit the application:** [tapiocaemdr.com](https://tapiocaemdr.com)
-
 ## 🎯 Use Case
 
 Tapioca EMDR addresses the growing need for accessible, secure online therapy platforms specifically designed for EMDR treatment. The application enables:
